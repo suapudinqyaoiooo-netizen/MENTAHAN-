@@ -1,0 +1,135 @@
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zap-Zaporium/Zap-is-Me/refs/heads/main/Zaporium.lua"))()
+
+-- Create main window
+local Window = library:CreateWindow("Parkour for Brainrot")
+
+-- ==================== AUTO FARMER CODE (Integrated) ====================
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+local BrainrotsFolder = workspace:WaitForChild("Brainrots")
+local SAFE_POSITION = CFrame.new(73.51, 134.64, -140.80)
+
+local AutoSecretEnabled = false
+local AutoImpossibleEnabled = false
+local isProcessing = false
+local connections = {}
+
+local TARGET_RARITIES_SECRET = {"Secret"}
+local TARGET_RARITIES_IMPOSSIBLE = {"IMPOSSIBLE", "Impossible"}
+
+local function triggerPrompt(item)
+	local prompt = item:FindFirstChild("ProximityPrompt", true)
+	if prompt then
+		prompt:InputHoldBegin()
+		wait(0.8)
+		prompt:InputHoldEnd()
+	else
+		warn("⚠️ No ProximityPrompt on " .. item.Name)
+	end
+end
+
+local function processItem(item)
+	if isProcessing then return end
+	isProcessing = true
+
+	local attachment = item:FindFirstChild("Attachment")
+	if not attachment then isProcessing = false return end
+	
+	local brainrot = attachment:FindFirstChild("Brainrot")
+	if not brainrot then isProcessing = false return end
+	
+	local rarityLabel = brainrot:FindFirstChild("Rarity")
+	if not (rarityLabel and rarityLabel:IsA("TextLabel")) then 
+		isProcessing = false return 
+	end
+
+	local rarity = rarityLabel.Text
+	local shouldCollect = false
+
+	if AutoSecretEnabled and table.find(TARGET_RARITIES_SECRET, rarity) then
+		shouldCollect = true
+	elseif AutoImpossibleEnabled and table.find(TARGET_RARITIES_IMPOSSIBLE, rarity) then
+		shouldCollect = true
+	end
+
+	if shouldCollect then
+		print("🎯 Detected " .. rarity .. " → " .. item.Name)
+		root.CFrame = item:GetPivot() * CFrame.new(0, 5, 0)
+		wait(1.2)
+		triggerPrompt(item)
+		wait(1.5)
+		root.CFrame = SAFE_POSITION
+		wait(2.5)
+	end
+
+	isProcessing = false
+end
+
+local function setupZone(zoneName)
+	local zone = BrainrotsFolder:WaitForChild(zoneName)
+	
+	for _, item in ipairs(zone:GetChildren()) do
+		task.spawn(processItem, item)
+	end
+	
+	local conn = zone.ChildAdded:Connect(function(newItem)
+		wait(0.5)
+		processItem(newItem)
+	end)
+	table.insert(connections, conn)
+end
+
+local function startFarmer()
+	for _, conn in ipairs(connections) do conn:Disconnect() end
+	connections = {}
+	setupZone("Zone9")
+	setupZone("Zone10")
+	print("🚀 Auto Farmer Started")
+end
+
+local function stopFarmer()
+	for _, conn in ipairs(connections) do conn:Disconnect() end
+	connections = {}
+	isProcessing = false
+	print("⛔ Auto Farmer Stopped")
+end
+
+-- ==================== GUI ELEMENTS ====================
+
+Window:AddToggle({
+    text = "Auto Secret",
+    state = false,
+    flag = "autoseCRET",
+    callback = function(v)
+        AutoSecretEnabled = v
+        if AutoSecretEnabled or AutoImpossibleEnabled then
+            startFarmer()
+        else
+            stopFarmer()
+        end
+    end
+})
+
+Window:AddToggle({
+    text = "Auto Impossible",
+    state = false,
+    flag = "autoimpossible",
+    callback = function(v)
+        AutoImpossibleEnabled = v
+        if AutoSecretEnabled or AutoImpossibleEnabled then
+            startFarmer()
+        else
+            stopFarmer()
+        end
+    end
+})
+-- Credit - DO NOT REMOVE OR MODIFY
+Window:AddLabel({text = "Made by RilzHub"})
+
+-- Initialize GUI
+library:Init()
+
+print("RilzHub GUI Loaded with Auto Secret & Auto Impossible!")
