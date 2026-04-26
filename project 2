@@ -1,0 +1,188 @@
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Zap-Zaporium/Zap-is-Me/refs/heads/main/Zaporium.lua"))()
+
+-- Create main window
+local Window = library:CreateWindow("+1 DoubleJump Brainrot")
+
+-- ==================== VARIABLES ====================
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+local itemSpawnsFolder = workspace:WaitForChild("ItemSpawns")
+local spawnFolders = {
+    itemSpawnsFolder:WaitForChild("1000"),
+    itemSpawnsFolder:WaitForChild("500")
+}
+
+local SAFE_ZONE = CFrame.new(-30.55, 3.86, 24.20)
+
+local autoRebirth = false
+local autoBuyJump = false
+local autoBuySpeed = false
+local autoFarm = false
+
+-- ==================== EARNINGS FARM FUNCTIONS ====================
+local function parseEarnings(text)
+    if not text or text == "" then return 0 end
+    local numberStr, suffix = text:match("([%d%.]+)([kKmM]?)")
+    if not numberStr then return 0 end
+    local number = tonumber(numberStr) or 0
+    if suffix == "k" or suffix == "K" then number *= 1000
+    elseif suffix == "m" or suffix == "M" then number *= 1000000 end
+    return number
+end
+
+local function getEarningsAndPrompt(item)
+    local target = item:FindFirstChild("SpawnedItem") or item
+    local infoGUI = target:FindFirstChild("InfoGUI")
+    if not infoGUI then return 0, nil end
+    local textLabels = infoGUI:FindFirstChild("TextLabels")
+    if not textLabels then return 0, nil end
+    local earningsLabel = textLabels:FindFirstChild("Earnings")
+    if not earningsLabel then return 0, nil end
+    
+    local earnings = parseEarnings(earningsLabel.Text)
+    local prompt = target:FindFirstChild("B18") or target:FindFirstChildWhichIsA("ProximityPrompt", true)
+    return earnings, prompt
+end
+
+local function goToSafeZone()
+    root.CFrame = SAFE_ZONE
+    task.wait(0.6)
+end
+
+local function collectHighest()
+    while autoFarm do
+        local bestItem = nil
+        local bestEarnings = -1
+        local bestPrompt = nil
+        
+        for _, folder in ipairs(spawnFolders) do
+            for _, child in ipairs(folder:GetChildren()) do
+                local earnings, prompt = getEarningsAndPrompt(child)
+                if earnings > bestEarnings and prompt and earnings > 0 then
+                    bestEarnings = earnings
+                    bestItem = child
+                    bestPrompt = prompt
+                end
+            end
+        end
+        
+        if bestItem and bestEarnings > 0 then
+            print("ðŸŽ¯ Targeting: " .. bestItem.Name .. " | $" .. bestEarnings)
+            
+            local targetPart = bestItem:FindFirstChildWhichIsA("BasePart") or bestItem.PrimaryPart or bestItem:FindFirstChild("SpawnedItem")
+            if targetPart then
+                root.CFrame = targetPart.CFrame * CFrame.new(0, 6, 0)
+                task.wait(0.5)
+            end
+            
+            if bestPrompt then
+                bestPrompt:InputHoldBegin()
+                task.wait(0.25)
+                bestPrompt:InputHoldEnd()
+                task.wait(1.2)
+            end
+            
+            goToSafeZone()
+            task.wait(1)
+        else
+            goToSafeZone()
+            task.wait(4)
+        end
+    end
+end
+
+-- ==================== GUI TOGGLES ====================
+
+Window:AddToggle({
+    text = "Auto Rebirth",
+    state = false,
+    flag = "autorebirth",
+    callback = function(state)
+        autoRebirth = state
+        if state then
+            print("âœ… Auto Rebirth Enabled")
+            task.spawn(function()
+                local rebirthEvent = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Events"):WaitForChild("RequestRebirth")
+                while autoRebirth do
+                    rebirthEvent:FireServer()
+                    task.wait(1)
+                end
+            end)
+        else
+            print("â›” Auto Rebirth Disabled")
+        end
+    end
+})
+
+Window:AddToggle({
+    text = "Buy Jump",
+    state = false,
+    flag = "buyjump",
+    callback = function(state)
+        autoBuyJump = state
+        if state then
+            print("âœ… Auto Buy Jump Enabled")
+            task.spawn(function()
+                local args = {"jump"}
+                local event = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Events"):WaitForChild("PurchaseJump")
+                while autoBuyJump do
+                    event:FireServer(unpack(args))
+                    task.wait(0.5)
+                end
+            end)
+        else
+            print("â›” Auto Buy Jump Disabled")
+        end
+    end
+})
+
+Window:AddToggle({
+    text = "Buy Speed",
+    state = false,
+    flag = "buyspeed",
+    callback = function(state)
+        autoBuySpeed = state
+        if state then
+            print("âœ… Auto Buy Speed Enabled")
+            task.spawn(function()
+                local args = {"speed"}
+                local event = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Events"):WaitForChild("PurchaseJump")  -- Note: Using same event as jump
+                while autoBuySpeed do
+                    event:FireServer(unpack(args))
+                    task.wait(0.5)
+                end
+            end)
+        else
+            print("â›” Auto Buy Speed Disabled")
+        end
+    end
+})
+
+Window:AddToggle({
+    text = "Auto Highest Money",
+    state = false,
+    flag = "autohighestmoney",
+    callback = function(state)
+        autoFarm = state
+        if state then
+            print("ðŸš€ Auto Highest Money Farm Started")
+            task.spawn(collectHighest)
+        else
+            print("â›” Auto Highest Money Farm Stopped")
+            goToSafeZone()
+        end
+    end
+})
+
+-- Credit (DO NOT REMOVE)
+Window:AddLabel({text = "Made by RilzHub"})
+
+-- Initialize GUI
+library:Init()
+
+print("RilzHub GUI Loaded with Auto Rebirth, Buy Jump, Buy Speed & Auto Farm!")
