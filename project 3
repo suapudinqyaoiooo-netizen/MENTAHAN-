@@ -1,0 +1,183 @@
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local lp = Players.LocalPlayer
+local sellRemote = RS:WaitForChild("Shared"):WaitForChild("Packages"):WaitForChild("Network"):WaitForChild("ref_B_Sell")
+
+local OG = {}
+local running = false
+local sold = 0
+
+local function getHum() return lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") end
+
+local sg = Instance.new("ScreenGui", lp:WaitForChild("PlayerGui"))
+sg.Name = "AutoSellHub" sg.ResetOnSpawn = false
+
+local M = Instance.new("Frame", sg)
+M.Size = UDim2.new(0, 260, 0, 160) M.Position = UDim2.new(0.5, -130, 0, 120)
+M.BackgroundColor3 = Color3.fromRGB(10, 10, 18) M.Active = true M.Draggable = true M.BorderSizePixel = 0
+Instance.new("UICorner", M).CornerRadius = UDim.new(0, 12)
+local sk = Instance.new("UIStroke", M) sk.Color = Color3.fromRGB(255, 100, 60) sk.Thickness = 1.5 sk.Transparency = 0.3
+
+local ab = Instance.new("Frame", M) ab.Size = UDim2.new(1, 0, 0, 3) ab.BorderSizePixel = 0 ab.BackgroundColor3 = Color3.fromRGB(255, 80, 40)
+Instance.new("UICorner", ab).CornerRadius = UDim.new(0, 12)
+local ag = Instance.new("UIGradient", ab)
+ag.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 30)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 180, 60)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 50, 30))})
+
+local function mk(parent, y, txt, sz, col, bold)
+    local l = Instance.new("TextLabel", parent)
+    l.Size = UDim2.new(1, -28, 0, 18) l.Position = UDim2.new(0, 14, 0, y)
+    l.BackgroundTransparency = 1 l.Text = txt l.TextColor3 = col l.TextSize = sz
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham return l
+end
+
+mk(M, 10, "Auto Selll Brainrot", 15, Color3.fromRGB(255, 255, 255), true)
+local sLbl = mk(M, 34, "Idle", 11, Color3.fromRGB(160, 160, 160), false)
+local qLbl = mk(M, 52, "Antrian: 0  |  Sold: 0", 11, Color3.fromRGB(255, 160, 60), true)
+local ogLbl = mk(M, 69, "Brainrot (skip): 0", 10, Color3.fromRGB(80, 200, 120), false)
+
+local SelBtn = Instance.new("TextButton", M)
+SelBtn.Size = UDim2.new(0, 110, 0, 28) SelBtn.Position = UDim2.new(0, 14, 0, 92)
+SelBtn.BackgroundColor3 = Color3.fromRGB(20, 40, 80) SelBtn.Text = "⚙  Pilih Brainrot"
+SelBtn.TextColor3 = Color3.fromRGB(100, 180, 255) SelBtn.Font = Enum.Font.GothamBold SelBtn.TextSize = 12 SelBtn.BorderSizePixel = 0
+Instance.new("UICorner", SelBtn).CornerRadius = UDim.new(0, 8)
+local ss = Instance.new("UIStroke", SelBtn) ss.Color = Color3.fromRGB(80, 140, 255) ss.Thickness = 1 ss.Transparency = 0.4
+
+local Btn = Instance.new("TextButton", M)
+Btn.Size = UDim2.new(0, 118, 0, 28) Btn.Position = UDim2.new(0, 136, 0, 92)
+Btn.BackgroundColor3 = Color3.fromRGB(30, 20, 55) Btn.Text = "▶  START SELL"
+Btn.TextColor3 = Color3.fromRGB(255, 130, 60) Btn.Font = Enum.Font.GothamBold Btn.TextSize = 12 Btn.BorderSizePixel = 0
+Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+local bs = Instance.new("UIStroke", Btn) bs.Color = Color3.fromRGB(255, 100, 60) bs.Thickness = 1 bs.Transparency = 0.4
+
+local X = Instance.new("TextButton", M)
+X.Size = UDim2.new(0, 24, 0, 24) X.Position = UDim2.new(1, -30, 0, 10)
+X.BackgroundColor3 = Color3.fromRGB(200, 50, 80) X.Text = "✕" X.TextColor3 = Color3.fromRGB(255, 255, 255)
+X.Font = Enum.Font.GothamBold X.TextSize = 11 X.BorderSizePixel = 0
+Instance.new("UICorner", X).CornerRadius = UDim.new(0, 6)
+
+local SP = Instance.new("Frame", sg)
+SP.Size = UDim2.new(0, 240, 0, 300) SP.Position = UDim2.new(0.5, -120, 0.5, -150)
+SP.BackgroundColor3 = Color3.fromRGB(10, 10, 18) SP.BorderSizePixel = 0 SP.Visible = false
+Instance.new("UICorner", SP).CornerRadius = UDim.new(0, 12)
+local spsk = Instance.new("UIStroke", SP) spsk.Color = Color3.fromRGB(80, 140, 255) spsk.Thickness = 1.5 spsk.Transparency = 0.3
+
+local spTitle = Instance.new("TextLabel", SP)
+spTitle.Size = UDim2.new(1, -20, 0, 24) spTitle.Position = UDim2.new(0, 10, 0, 8)
+spTitle.BackgroundTransparency = 1 spTitle.Text = "Pilih Brainrot (skip saat sell)"
+spTitle.TextColor3 = Color3.fromRGB(200, 200, 255) spTitle.Font = Enum.Font.GothamBold spTitle.TextSize = 12
+spTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local SV = Instance.new("ScrollingFrame", SP)
+SV.Size = UDim2.new(1, -16, 1, -70) SV.Position = UDim2.new(0, 8, 0, 36)
+SV.BackgroundTransparency = 1 SV.BorderSizePixel = 0
+SV.ScrollBarThickness = 4 SV.ScrollBarImageColor3 = Color3.fromRGB(80, 140, 255)
+SV.CanvasSize = UDim2.new(0, 0, 0, 0) SV.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local svLayout = Instance.new("UIListLayout", SV) svLayout.Padding = UDim.new(0, 4) svLayout.SortOrder = Enum.SortOrder.Name
+
+local ClosePanel = Instance.new("TextButton", SP)
+ClosePanel.Size = UDim2.new(1, -16, 0, 26) ClosePanel.Position = UDim2.new(0, 8, 1, -34)
+ClosePanel.BackgroundColor3 = Color3.fromRGB(20, 40, 80) ClosePanel.Text = "✔  Selesai Pilih"
+ClosePanel.TextColor3 = Color3.fromRGB(100, 200, 255) ClosePanel.Font = Enum.Font.GothamBold ClosePanel.TextSize = 12 ClosePanel.BorderSizePixel = 0
+Instance.new("UICorner", ClosePanel).CornerRadius = UDim.new(0, 8)
+
+local function buildSelector()
+    for _, c in ipairs(SV:GetChildren()) do
+        if c:IsA("Frame") then c:Destroy() end
+    end
+
+    local seen = {}
+    for _, t in ipairs(lp.Backpack:GetChildren()) do
+        if t:IsA("Tool") and t:GetAttribute("GUID") then
+            seen[t.Name] = true
+        end
+    end
+
+    for name in pairs(seen) do
+        local row = Instance.new("Frame", SV)
+        row.Size = UDim2.new(1, 0, 0, 30) row.BackgroundTransparency = 1
+
+        local cb = Instance.new("TextButton", row)
+        cb.Size = UDim2.new(0, 20, 0, 20) cb.Position = UDim2.new(0, 2, 0.5, -10)
+        cb.BackgroundColor3 = OG[name] and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(40, 40, 60)
+        cb.Text = OG[name] and "✔" or ""
+        cb.TextColor3 = Color3.fromRGB(255, 255, 255) cb.Font = Enum.Font.GothamBold cb.TextSize = 12 cb.BorderSizePixel = 0
+        Instance.new("UICorner", cb).CornerRadius = UDim.new(0, 5)
+
+        local lbl = Instance.new("TextLabel", row)
+        lbl.Size = UDim2.new(1, -30, 1, 0) lbl.Position = UDim2.new(0, 28, 0, 0)
+        lbl.BackgroundTransparency = 1 lbl.Text = name
+        lbl.TextColor3 = Color3.fromRGB(220, 220, 220) lbl.Font = Enum.Font.Gotham lbl.TextSize = 12
+        lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+        cb.MouseButton1Click:Connect(function()
+            if OG[name] then
+                OG[name] = nil
+                cb.BackgroundColor3 = Color3.fromRGB(40, 40, 60) cb.Text = ""
+            else
+                OG[name] = 1
+                cb.BackgroundColor3 = Color3.fromRGB(60, 200, 100) cb.Text = "✔"
+            end
+            local c = 0 for _ in pairs(OG) do c += 1 end
+            ogLbl.Text = "Brainrot (skip): " .. c
+        end)
+    end
+end
+
+SelBtn.MouseButton1Click:Connect(function()
+    SP.Visible = not SP.Visible
+    if SP.Visible then buildSelector() end
+end)
+
+ClosePanel.MouseButton1Click:Connect(function()
+    SP.Visible = false
+end)
+
+Btn.MouseButton1Click:Connect(function()
+    running = not running
+    if not running then
+        Btn.Text = "▶  START SELL" Btn.BackgroundColor3 = Color3.fromRGB(30, 20, 55)
+        sLbl.Text = "Dihentikan — Sold: " .. sold sLbl.TextColor3 = Color3.fromRGB(160, 160, 160)
+        local h = getHum() if h then h:UnequipTools() end
+        return
+    end
+    Btn.Text = "⏹  STOP" Btn.BackgroundColor3 = Color3.fromRGB(20, 60, 25)
+    sold = 0
+
+    task.spawn(function()
+        while running do
+            local ogc, sellable = 0, {}
+            for _, t in ipairs(lp.Backpack:GetChildren()) do
+                if t:IsA("Tool") and t:GetAttribute("GUID") then
+                    if OG[t.Name] then ogc += 1 else table.insert(sellable, t) end
+                end
+            end
+            ogLbl.Text = "Brainrot (skip): " .. ogc
+
+            if #sellable == 0 then
+                sLbl.Text = "✅ Selesai!" sLbl.TextColor3 = Color3.fromRGB(80, 220, 120)
+                qLbl.Text = "Antrian: 0  |  Sold: " .. sold
+                running = false break
+            end
+
+            for _, tool in ipairs(sellable) do
+                if not running or not tool or not tool.Parent then continue end
+                local h = getHum() if h then h:EquipTool(tool) end
+                task.wait()
+                pcall(function() sellRemote:InvokeServer() end)
+                sold += 1
+                sLbl.Text = "🪙 " .. tool.Name sLbl.TextColor3 = Color3.fromRGB(255, 160, 60)
+                qLbl.Text = "Sold: " .. sold
+                local h2 = getHum() if h2 then h2:UnequipTools() end
+            end
+        end
+        Btn.Text = "▶  START SELL" Btn.BackgroundColor3 = Color3.fromRGB(30, 20, 55)
+        sLbl.Text = "Selesai — Sold: " .. sold sLbl.TextColor3 = Color3.fromRGB(80, 220, 120)
+    end)
+end)
+
+X.MouseButton1Click:Connect(function()
+    running = false
+    local h = getHum() if h then h:UnequipTools() end
+    sg:Destroy()
+end)
