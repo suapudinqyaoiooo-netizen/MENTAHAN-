@@ -103,7 +103,7 @@ function runSequence()
     local waitStart = tick()
     while isEnabled and currentSession == session do
         local elapsed = tick() - waitStart
-        if elapsed >= 14 then break end
+        if elapsed >= 17 then break end
         local c, rp = getCharacter()
         rp.CFrame = CFrame.new(waiting)
         task.wait(0.5)
