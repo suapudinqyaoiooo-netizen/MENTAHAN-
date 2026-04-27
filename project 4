@@ -85,7 +85,7 @@ local player = Players.LocalPlayer
 
 local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
 local startPosition = Vector3.new(699.768, 3.167, 231.199)
-local afterKickPosition = Vector3.new(-3306.636962890625, 60.99802017211914, 161.6610870361328)
+local afterKickPosition = Vector3.new(-3175.41943359375, 49.99802017211914, 157.18048095703125)
 
 local detecting = false
 local toolConnection
@@ -159,7 +159,8 @@ function runSequence()
 
     local character, rootPart, humanoid = getCharacter()
 
-    task.wait(0.5)
+    -- Tunggu karakter benar2 siap
+    task.wait(1.5)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
     if not rootPart or not rootPart.Parent then
@@ -174,8 +175,17 @@ function runSequence()
         return
     end
 
-    task.wait(0.4)
+    -- Pastikan benar2 sampai di startPosition sebelum fire
+    task.wait(0.6)
     if not isEnabled or currentSession ~= session then isRunning = false return end
+
+    -- Validasi posisi sebelum FireServer
+    if (rootPart.Position - startPosition).Magnitude > 10 then
+        isRunning = false
+        task.wait(1)
+        if isEnabled then task.spawn(runSequence) end
+        return
+    end
 
     local args = { [1] = 1 }
     game:GetService("ReplicatedStorage")
@@ -283,7 +293,7 @@ Tabs.Main:AddToggle("AutoPerfectClaim", {
             isRunning = false
             detecting = false
             task.spawn(function()
-                task.wait(1)
+                task.wait(2)
                 if isEnabled then
                     runSequence()
                 end
