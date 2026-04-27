@@ -1,18 +1,97 @@
--- Rilzz Hub - SC Kick Script
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-local Window = Rayfield:CreateWindow({
-    Name = "Rilzz Hub",
-    LoadingTitle = "Rilzz Hub",
-    LoadingSubtitle = "by Rilzz",
-    ConfigurationSaving = { Enabled = false },
-    Discord = { Enabled = false },
-    KeySystem = false,
+-- ================= ANTI DUPLICATE =================
+if getgenv().RilzzHub_CloseOld then
+    pcall(getgenv().RilzzHub_CloseOld)
+end
+
+getgenv().RilzzHub_AutoCollect = false
+getgenv().RilzzHub_AutoPerfectClaim = false
+getgenv().RilzzHub_AutoSell = false
+getgenv().RilzzHub_SkipList = {}
+getgenv().RilzzHub_Loaded = true
+
+-- ================= SERVICES =================
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+LocalPlayer.CharacterAdded:Connect(function(Char)
+    Character = Char
+    RootPart = Char:WaitForChild("HumanoidRootPart")
+end)
+
+local sellRemote = RS:WaitForChild("Shared"):WaitForChild("Packages"):WaitForChild("Network"):WaitForChild("ref_B_Sell")
+
+-- ================= WINDOW =================
+local Window = Fluent:CreateWindow({
+    Title = "Kick A Lucky Block",
+    SubTitle = "Made By Rilzz | PREMIUM",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(540, 400),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
-local Tab = Window:CreateTab("Main", 4483362458)
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "box" }),
+    Sell = Window:AddTab({ Title = "Sell", Icon = "coins" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+}
 
-local player = game.Players.LocalPlayer
+-- ================= TOGGLE AUTO COLLECT =================
+Tabs.Main:AddToggle("AutoCollect", {
+    Title = "Auto Collect",
+    Default = false,
+    Callback = function(Value)
+        getgenv().RilzzHub_AutoCollect = Value
+    end
+})
+
+-- ================= AUTO COLLECT =================
+task.spawn(function()
+    while getgenv().RilzzHub_Loaded and task.wait(0.25) do
+        if getgenv().RilzzHub_AutoCollect then
+            local Plots = workspace:FindFirstChild("Plots")
+            if Plots then
+                for _, Plot in ipairs(Plots:GetChildren()) do
+                    local Buttons = Plot:FindFirstChild("Buttons")
+                    if Buttons then
+                        for _, Obj in ipairs(Buttons:GetChildren()) do
+                            if Obj:IsA("BasePart") then
+                                pcall(function()
+                                    firetouchinterest(RootPart, Obj, 0)
+                                    firetouchinterest(RootPart, Obj, 1)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ================= SC KICK SCRIPT =================
+local player = Players.LocalPlayer
+
+local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
+local startPosition = Vector3.new(699.768, 3.167, 231.199)
+local afterKickPosition = Vector3.new(-3306.636962890625, 60.99802017211914, 161.6610870361328)
+
+local detecting = false
+local toolConnection
+local isRunning = false
+local isEnabled = false
+local currentSession = 0
 
 local function getCharacter()
     local character = player.Character or player.CharacterAdded:Wait()
@@ -20,16 +99,6 @@ local function getCharacter()
     local humanoid = character:WaitForChild("Humanoid")
     return character, rootPart, humanoid
 end
-
-local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
-local startPosition = Vector3.new(699.768, 3.167, 231.199)
-local afterKickPosition = Vector3.new(-3175.41943359375, 49.99802017211914, 157.18048095703125)
-
-local detecting = false
-local toolConnection
-local isRunning = false
-local isEnabled = false
-local currentSession = 0
 
 local function stopAll()
     detecting = false
@@ -44,7 +113,6 @@ local function stopAll()
 end
 
 local function safeTeleport(rootPart, pos, timeout, session)
-    -- Retry tp sampai 3x kalau gagal
     for attempt = 1, 3 do
         rootPart.CFrame = CFrame.new(pos)
         local waited = 0
@@ -54,11 +122,11 @@ local function safeTeleport(rootPart, pos, timeout, session)
             if not isEnabled then return false end
             if currentSession ~= session then return false end
         until (rootPart.Position - pos).Magnitude < 5 or waited >= (timeout or 2)
-        
+
         if (rootPart.Position - pos).Magnitude < 5 then
             return true
         end
-        task.wait(0.3) -- jeda antar retry
+        task.wait(0.3)
         if not isEnabled or currentSession ~= session then return false end
     end
     return false
@@ -91,24 +159,21 @@ function runSequence()
 
     local character, rootPart, humanoid = getCharacter()
 
-    -- Pastikan karakter benar2 sudah loaded
     task.wait(0.5)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
-    -- Cek karakter valid dulu sebelum tp
     if not rootPart or not rootPart.Parent then
         character, rootPart, humanoid = getCharacter()
     end
 
     local ok = safeTeleport(rootPart, startPosition, 2, session)
-    if not ok or not isEnabled or currentSession ~= session then 
-        isRunning = false 
-        -- Kalau tp gagal total, coba ulang setelah delay
+    if not ok or not isEnabled or currentSession ~= session then
+        isRunning = false
         task.wait(2)
         if isEnabled then task.spawn(runSequence) end
-        return 
+        return
     end
-    
+
     task.wait(0.4)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
@@ -123,7 +188,6 @@ function runSequence()
     ok = safeTeleport(rootPart, afterKickPosition, 2, session)
     if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
 
-    -- Loop teleport di afterKickPosition selama 17 detik
     local waitStart = tick()
     while isEnabled and currentSession == session do
         local elapsed = tick() - waitStart
@@ -145,7 +209,6 @@ function runSequence()
         end
     end)
 
-    -- Race condition check
     task.spawn(function()
         task.wait(0.15)
         if not detecting or currentSession ~= session then return end
@@ -157,24 +220,30 @@ function runSequence()
         end
     end)
 
-    -- Loop TP ke finalPosition sambil cek tool
-    -- Juga cek session timeout: kalau detecting terlalu lama (30 detik), restart
     task.spawn(function()
-        local detectStart = tick()
+        local lastMovedTime = tick()
+
         while detecting and isEnabled and currentSession == session do
-            -- Timeout 30 detik di fase detecting, restart kalau stuck
-            if tick() - detectStart > 30 then
-                detecting = false
-                isRunning = false
-                if toolConnection then toolConnection:Disconnect() toolConnection = nil end
-                task.wait(0.5)
-                if isEnabled then task.spawn(runSequence) end
-                return
-            end
             local c, rp = getCharacter()
             rp.CFrame = CFrame.new(finalPosition)
             task.wait(0.5)
+
             if detecting and currentSession == session then
+                local distFromFinal = (rp.Position - finalPosition).Magnitude
+
+                if distFromFinal > 10 then
+                    lastMovedTime = tick()
+                end
+
+                if tick() - lastMovedTime >= 60 then
+                    detecting = false
+                    isRunning = false
+                    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+                    task.wait(0.5)
+                    if isEnabled then task.spawn(runSequence) end
+                    return
+                end
+
                 for _, child in ipairs(c:GetChildren()) do
                     if child:IsA("Tool") then
                         onToolDetected(session)
@@ -186,7 +255,6 @@ function runSequence()
     end)
 end
 
--- Auto loop saat karakter respawn
 player.CharacterAdded:Connect(function(newCharacter)
     if isEnabled then
         isRunning = false
@@ -204,16 +272,16 @@ player.CharacterAdded:Connect(function(newCharacter)
     end
 end)
 
-Tab:CreateToggle({
-    Name = "Auto Perfect And Claim",
-    CurrentValue = false,
-    Flag = "AutoPerfectClaim",
-    Callback = function(value)
-        isEnabled = value
+-- ================= TOGGLE AUTO PERFECT AND CLAIM =================
+Tabs.Main:AddToggle("AutoPerfectClaim", {
+    Title = "Auto Perfect And Claim",
+    Default = false,
+    Callback = function(Value)
+        getgenv().RilzzHub_AutoPerfectClaim = Value
+        isEnabled = Value
         if isEnabled then
             isRunning = false
             detecting = false
-            -- Delay di awal supaya karakter siap dulu
             task.spawn(function()
                 task.wait(1)
                 if isEnabled then
@@ -226,4 +294,187 @@ Tab:CreateToggle({
     end,
 })
 
-Rayfield:LoadConfiguration()
+-- ================= SELL FUNCTIONS =================
+local function getHum()
+    return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function getBrainrots()
+    local list = {}
+    for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if t:IsA("Tool") and t:GetAttribute("GUID") then
+            if not table.find(list, t.Name) then
+                table.insert(list, t.Name)
+            end
+        end
+    end
+    table.sort(list)
+    return list
+end
+
+local function getSellableTools()
+    local tools = {}
+    for _, t in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if t:IsA("Tool") and t:GetAttribute("GUID") then
+            if not getgenv().RilzzHub_SkipList[t.Name] then
+                table.insert(tools, t)
+            end
+        end
+    end
+    return tools
+end
+
+-- ================= SELL TAB UI =================
+local SelectorDropdown = Tabs.Sell:AddDropdown("SkipSelector", {
+    Title = "Selector Brainrot (Skip Sell)",
+    Values = getBrainrots(),
+    Multi = true,
+    Default = {},
+    Callback = function(Value)
+        getgenv().RilzzHub_SkipList = {}
+        for name, state in pairs(Value) do
+            if state then
+                getgenv().RilzzHub_SkipList[name] = true
+            end
+        end
+    end
+})
+
+Tabs.Sell:AddButton({
+    Title = "Refresh Selector",
+    Callback = function()
+        local newValues = getBrainrots()
+        pcall(function()
+            SelectorDropdown:SetValues(newValues)
+        end)
+        Fluent:Notify({
+            Title = "Kick A Lucky Block",
+            Content = "Selector berhasil di refresh",
+            Duration = 3
+        })
+    end
+})
+
+Tabs.Sell:AddToggle("AutoSell", {
+    Title = "Auto Sell Brainrot",
+    Default = false,
+    Callback = function(v)
+        getgenv().RilzzHub_AutoSell = v
+    end
+})
+
+-- ================= AUTO SELL =================
+task.spawn(function()
+    while getgenv().RilzzHub_Loaded and task.wait(0.3) do
+        if getgenv().RilzzHub_AutoSell then
+            local tools = getSellableTools()
+
+            if #tools == 0 then
+                Fluent:Notify({
+                    Title = "Kick A Lucky Block",
+                    Content = "Tidak ada Brainrot untuk dijual",
+                    Duration = 3
+                })
+                getgenv().RilzzHub_AutoSell = false
+                continue
+            end
+
+            local sold = 0
+
+            for _, tool in ipairs(tools) do
+                if not getgenv().RilzzHub_AutoSell then break end
+
+                local hum = getHum()
+                if hum then hum:EquipTool(tool) end
+
+                task.wait(0.1)
+
+                pcall(function()
+                    sellRemote:InvokeServer()
+                end)
+
+                sold += 1
+                task.wait(0.1)
+
+                local hum2 = getHum()
+                if hum2 then hum2:UnequipTools() end
+            end
+
+            Fluent:Notify({
+                Title = "Kick A Lucky Block",
+                Content = "Berhasil menjual " .. sold .. " Brainrot",
+                Duration = 4
+            })
+
+            getgenv().RilzzHub_AutoSell = false
+        end
+    end
+end)
+
+-- ================= MOBILE MINIMIZE FIX =================
+local function CreateMobileButton()
+    if not UserInputService.TouchEnabled then
+        return
+    end
+
+    local old = CoreGui:FindFirstChild("RilzzMini")
+    if old then old:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "RilzzMini"
+    gui.ResetOnSpawn = false
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.Parent = CoreGui
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.fromOffset(60, 60)
+    btn.Position = UDim2.new(1, -80, 0.55, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    btn.BackgroundTransparency = 0.15
+    btn.Text = "R"
+    btn.TextScaled = true
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Parent = gui
+    btn.AutoButtonColor = true
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        pcall(function()
+            Window:Minimize()
+        end)
+    end)
+
+    getgenv().RilzzHub_CloseOld = function()
+        gui:Destroy()
+        getgenv().RilzzHub_AutoCollect = false
+        getgenv().RilzzHub_AutoPerfectClaim = false
+        getgenv().RilzzHub_AutoSell = false
+        getgenv().RilzzHub_SkipList = {}
+        getgenv().RilzzHub_Loaded = false
+        isEnabled = false
+        stopAll()
+    end
+end
+
+task.spawn(function()
+    task.wait(1)
+    CreateMobileButton()
+end)
+
+-- ================= SETTINGS =================
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "Kick A Lucky Block",
+    Content = "Loaded Successfully",
+    Duration = 5
+})
