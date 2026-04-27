@@ -1,0 +1,188 @@
+-- Rilzz Hub - SC Kick Script
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Rilzz Hub",
+    LoadingTitle = "Rilzz Hub",
+    LoadingSubtitle = "by Rilzz",
+    ConfigurationSaving = { Enabled = false },
+    Discord = { Enabled = false },
+    KeySystem = false,
+})
+
+local Tab = Window:CreateTab("Main", 4483362458)
+
+local player = game.Players.LocalPlayer
+
+local function getCharacter()
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+    return character, rootPart, humanoid
+end
+
+local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
+local startPosition = Vector3.new(699.768, 3.167, 231.199)
+local afterKickPosition = Vector3.new(-3175.41943359375, 49.99802017211914, 157.18048095703125)
+local waiting = Vector3.new(-3175.41943359375, 60, 157.18048095703125)
+
+local detecting = false
+local toolConnection
+local isRunning = false
+local isEnabled = false
+local currentSession = 0
+
+local function stopAll()
+    detecting = false
+    isRunning = false
+    currentSession += 1
+    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+    local _, _, humanoid = getCharacter()
+    if humanoid then
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+    end
+end
+
+local function safeTeleport(rootPart, pos, timeout, session)
+    rootPart.CFrame = CFrame.new(pos)
+    local waited = 0
+    repeat
+        task.wait(0.05)
+        waited += 0.05
+        if not isEnabled then return false end
+        if currentSession ~= session then return false end
+    until (rootPart.Position - pos).Magnitude < 5 or waited >= (timeout or 2)
+    return true
+end
+
+local function onToolDetected(session)
+    if not detecting then return end
+    if not isEnabled then return end
+    if currentSession ~= session then return end
+    detecting = false
+    isRunning = false
+    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+    task.spawn(function()
+        task.wait(0.2)
+        if isEnabled then
+            task.spawn(runSequence)
+        end
+    end)
+end
+
+function runSequence()
+    if isRunning then return end
+    if not isEnabled then return end
+    isRunning = true
+    detecting = false
+    currentSession += 1
+    local session = currentSession
+
+    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+
+    local character, rootPart, humanoid = getCharacter()
+
+    local ok = safeTeleport(rootPart, startPosition, 2, session)
+    if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
+    task.wait(0.4)
+    if not isEnabled or currentSession ~= session then isRunning = false return end
+
+    local args = { [1] = 1 }
+    game:GetService("ReplicatedStorage")
+        :WaitForChild("Shared")
+        :WaitForChild("Packages")
+        :WaitForChild("Network")
+        :WaitForChild("rev_KickEvent")
+        :FireServer(unpack(args))
+
+    ok = safeTeleport(rootPart, afterKickPosition, 2, session)
+    if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
+
+    -- Loop teleport di waiting selama 14 detik
+    local waitStart = tick()
+    while isEnabled and currentSession == session do
+        local elapsed = tick() - waitStart
+        if elapsed >= 14 then break end
+        local c, rp = getCharacter()
+        rp.CFrame = CFrame.new(waiting)
+        task.wait(0.5)
+    end
+    if not isEnabled or currentSession ~= session then isRunning = false return end
+
+    character, rootPart, humanoid = getCharacter()
+
+    detecting = true
+    isRunning = false
+
+    toolConnection = character.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then
+            onToolDetected(session)
+        end
+    end)
+
+    -- Race condition check
+    task.spawn(function()
+        task.wait(0.15)
+        if not detecting or currentSession ~= session then return end
+        for _, child in ipairs(character:GetChildren()) do
+            if child:IsA("Tool") then
+                onToolDetected(session)
+                return
+            end
+        end
+    end)
+
+    -- Loop TP ke finalPosition sambil cek tool
+    task.spawn(function()
+        while detecting and isEnabled and currentSession == session do
+            local c, rp = getCharacter()
+            rp.CFrame = CFrame.new(finalPosition)
+            task.wait(0.5)
+            if detecting and currentSession == session then
+                for _, child in ipairs(c:GetChildren()) do
+                    if child:IsA("Tool") then
+                        onToolDetected(session)
+                        return
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- Auto loop saat karakter respawn
+player.CharacterAdded:Connect(function(newCharacter)
+    if isEnabled then
+        isRunning = false
+        detecting = false
+        currentSession += 1
+        if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+
+        newCharacter:WaitForChild("HumanoidRootPart")
+        newCharacter:WaitForChild("Humanoid")
+        task.wait(1)
+
+        if isEnabled then
+            task.spawn(runSequence)
+        end
+    end
+end)
+
+Tab:CreateToggle({
+    Name = "Auto Perfect And Claim",
+    CurrentValue = false,
+    Flag = "AutoPerfectClaim",
+    Callback = function(value)
+        isEnabled = value
+        if isEnabled then
+            isRunning = false
+            detecting = false
+            task.spawn(runSequence)
+        else
+            stopAll()
+        end
+    end,
+})
+
+Rayfield:LoadConfiguration()
