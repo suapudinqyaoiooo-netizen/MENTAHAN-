@@ -142,12 +142,12 @@ local function onToolDetected(session)
     task.spawn(function()
         task.wait(0.5)
         if isEnabled then
-            runSequence()
+            runSequence(false)
         end
     end)
 end
 
-function runSequence()
+function runSequence(isFirstRun)
     if isRunning then return end
     if not isEnabled then return end
     isRunning = true
@@ -159,8 +159,11 @@ function runSequence()
 
     local character, rootPart, humanoid = getCharacter()
 
-    -- Tunggu karakter benar2 siap
-    task.wait(1.5)
+    if isFirstRun then
+        task.wait(2)
+    else
+        task.wait(0.5)
+    end
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
     if not rootPart or not rootPart.Parent then
@@ -171,19 +174,17 @@ function runSequence()
     if not ok or not isEnabled or currentSession ~= session then
         isRunning = false
         task.wait(2)
-        if isEnabled then task.spawn(runSequence) end
+        if isEnabled then task.spawn(function() runSequence(false) end) end
         return
     end
 
-    -- Pastikan benar2 sampai di startPosition sebelum fire
     task.wait(0.6)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
-    -- Validasi posisi sebelum FireServer
     if (rootPart.Position - startPosition).Magnitude > 10 then
         isRunning = false
         task.wait(1)
-        if isEnabled then task.spawn(runSequence) end
+        if isEnabled then task.spawn(function() runSequence(false) end) end
         return
     end
 
@@ -231,7 +232,7 @@ function runSequence()
     end)
 
     task.spawn(function()
-        local lastMovedTime = tick()
+        local stuckTimer = tick()
 
         while detecting and isEnabled and currentSession == session do
             local c, rp = getCharacter()
@@ -239,26 +240,22 @@ function runSequence()
             task.wait(0.5)
 
             if detecting and currentSession == session then
-                local distFromFinal = (rp.Position - finalPosition).Magnitude
-
-                if distFromFinal > 10 then
-                    lastMovedTime = tick()
-                end
-
-                if tick() - lastMovedTime >= 60 then
-                    detecting = false
-                    isRunning = false
-                    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
-                    task.wait(0.5)
-                    if isEnabled then task.spawn(runSequence) end
-                    return
-                end
-
+                -- Cek tool dulu
                 for _, child in ipairs(c:GetChildren()) do
                     if child:IsA("Tool") then
                         onToolDetected(session)
                         return
                     end
+                end
+
+                -- Timeout murni 60 detik
+                if tick() - stuckTimer >= 60 then
+                    detecting = false
+                    isRunning = false
+                    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+                    task.wait(0.5)
+                    if isEnabled then task.spawn(function() runSequence(false) end) end
+                    return
                 end
             end
         end
@@ -277,7 +274,7 @@ player.CharacterAdded:Connect(function(newCharacter)
         task.wait(2)
 
         if isEnabled then
-            runSequence()
+            runSequence(false)
         end
     end
 end)
@@ -295,7 +292,7 @@ Tabs.Main:AddToggle("AutoPerfectClaim", {
             task.spawn(function()
                 task.wait(2)
                 if isEnabled then
-                    runSequence()
+                    runSequence(true)
                 end
             end)
         else
