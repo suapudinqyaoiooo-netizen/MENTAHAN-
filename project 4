@@ -1,4 +1,3 @@
-
 -- Rilzz Hub - SC Kick Script
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -45,15 +44,24 @@ local function stopAll()
 end
 
 local function safeTeleport(rootPart, pos, timeout, session)
-    rootPart.CFrame = CFrame.new(pos)
-    local waited = 0
-    repeat
-        task.wait(0.05)
-        waited += 0.05
-        if not isEnabled then return false end
-        if currentSession ~= session then return false end
-    until (rootPart.Position - pos).Magnitude < 5 or waited >= (timeout or 2)
-    return true
+    -- Retry tp sampai 3x kalau gagal
+    for attempt = 1, 3 do
+        rootPart.CFrame = CFrame.new(pos)
+        local waited = 0
+        repeat
+            task.wait(0.05)
+            waited += 0.05
+            if not isEnabled then return false end
+            if currentSession ~= session then return false end
+        until (rootPart.Position - pos).Magnitude < 5 or waited >= (timeout or 2)
+        
+        if (rootPart.Position - pos).Magnitude < 5 then
+            return true
+        end
+        task.wait(0.3) -- jeda antar retry
+        if not isEnabled or currentSession ~= session then return false end
+    end
+    return false
 end
 
 local function onToolDetected(session)
@@ -83,8 +91,24 @@ function runSequence()
 
     local character, rootPart, humanoid = getCharacter()
 
+    -- Pastikan karakter benar2 sudah loaded
+    task.wait(0.5)
+    if not isEnabled or currentSession ~= session then isRunning = false return end
+
+    -- Cek karakter valid dulu sebelum tp
+    if not rootPart or not rootPart.Parent then
+        character, rootPart, humanoid = getCharacter()
+    end
+
     local ok = safeTeleport(rootPart, startPosition, 2, session)
-    if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
+    if not ok or not isEnabled or currentSession ~= session then 
+        isRunning = false 
+        -- Kalau tp gagal total, coba ulang setelah delay
+        task.wait(2)
+        if isEnabled then task.spawn(runSequence) end
+        return 
+    end
+    
     task.wait(0.4)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
@@ -134,8 +158,19 @@ function runSequence()
     end)
 
     -- Loop TP ke finalPosition sambil cek tool
+    -- Juga cek session timeout: kalau detecting terlalu lama (30 detik), restart
     task.spawn(function()
+        local detectStart = tick()
         while detecting and isEnabled and currentSession == session do
+            -- Timeout 30 detik di fase detecting, restart kalau stuck
+            if tick() - detectStart > 30 then
+                detecting = false
+                isRunning = false
+                if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+                task.wait(0.5)
+                if isEnabled then task.spawn(runSequence) end
+                return
+            end
             local c, rp = getCharacter()
             rp.CFrame = CFrame.new(finalPosition)
             task.wait(0.5)
@@ -178,7 +213,13 @@ Tab:CreateToggle({
         if isEnabled then
             isRunning = false
             detecting = false
-            task.spawn(runSequence)
+            -- Delay di awal supaya karakter siap dulu
+            task.spawn(function()
+                task.wait(1)
+                if isEnabled then
+                    runSequence()
+                end
+            end)
         else
             stopAll()
         end
