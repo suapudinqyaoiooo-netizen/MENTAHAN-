@@ -1,3 +1,4 @@
+
 -- Rilzz Hub - SC Kick Script
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -24,7 +25,6 @@ end
 local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
 local startPosition = Vector3.new(699.768, 3.167, 231.199)
 local afterKickPosition = Vector3.new(-3175.41943359375, 49.99802017211914, 157.18048095703125)
-local waiting = Vector3.new(-3175.41943359375, 60, 157.18048095703125)
 
 local detecting = false
 local toolConnection
@@ -64,9 +64,9 @@ local function onToolDetected(session)
     isRunning = false
     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
     task.spawn(function()
-        task.wait(0.2)
+        task.wait(0.5)
         if isEnabled then
-            task.spawn(runSequence)
+            runSequence()
         end
     end)
 end
@@ -99,13 +99,13 @@ function runSequence()
     ok = safeTeleport(rootPart, afterKickPosition, 2, session)
     if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
 
-    -- Loop teleport di waiting selama 14 detik
+    -- Loop teleport di afterKickPosition selama 17 detik
     local waitStart = tick()
     while isEnabled and currentSession == session do
         local elapsed = tick() - waitStart
         if elapsed >= 17 then break end
         local c, rp = getCharacter()
-        rp.CFrame = CFrame.new(waiting)
+        rp.CFrame = CFrame.new(afterKickPosition)
         task.wait(0.5)
     end
     if not isEnabled or currentSession ~= session then isRunning = false return end
@@ -161,10 +161,10 @@ player.CharacterAdded:Connect(function(newCharacter)
 
         newCharacter:WaitForChild("HumanoidRootPart")
         newCharacter:WaitForChild("Humanoid")
-        task.wait(1)
+        task.wait(2)
 
         if isEnabled then
-            task.spawn(runSequence)
+            runSequence()
         end
     end
 end)
