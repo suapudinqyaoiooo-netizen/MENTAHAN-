@@ -230,8 +230,8 @@ local function onToolDetected(session)
     isRunning = false
     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
     task.spawn(function()
-        task.wait(0.5)
-        if isEnabled then
+        task.wait(1)
+        if isEnabled and currentSession == session then
             runSequence(false)
         end
     end)
@@ -350,18 +350,23 @@ function runSequence(isFirstRun)
     end)
 end
 
+-- ================= CHARACTER ADDED =================
 player.CharacterAdded:Connect(function(newCharacter)
     if isEnabled then
+        -- Cancel semua loop lama DULU sebelum apapun
+        currentSession += 1
+        local session = currentSession
+
         isRunning = false
         detecting = false
-        currentSession += 1
         if toolConnection then toolConnection:Disconnect() toolConnection = nil end
 
         newCharacter:WaitForChild("HumanoidRootPart")
         newCharacter:WaitForChild("Humanoid")
         task.wait(2)
 
-        if isEnabled then
+        -- Cek session masih sama setelah wait
+        if isEnabled and currentSession == session then
             runSequence(false)
         end
     end
