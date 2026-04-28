@@ -10,6 +10,7 @@ end
 getgenv().RilzzHub_AutoCollect = false
 getgenv().RilzzHub_AutoPerfectClaim = false
 getgenv().RilzzHub_AutoSell = false
+getgenv().RilzzHub_AutoTrain = false
 getgenv().RilzzHub_SkipList = {}
 getgenv().RilzzHub_Loaded = true
 
@@ -22,6 +23,7 @@ local RS = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local RootPart = Character:WaitForChild("HumanoidRootPart")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 LocalPlayer.CharacterAdded:Connect(function(Char)
     Character = Char
@@ -76,6 +78,94 @@ task.spawn(function()
                     end
                 end
             end
+        end
+    end
+end)
+
+-- ================= TOGGLE AUTO TRAIN =================
+Tabs.Main:AddToggle("AutoTrain", {
+    Title = "Auto Train & x2",
+    Default = false,
+    Callback = function(Value)
+        getgenv().RilzzHub_AutoTrain = Value
+    end
+})
+
+-- ================= AUTO TRAIN LOOP =================
+task.spawn(function()
+    while getgenv().RilzzHub_Loaded and task.wait(0.1) do
+        if getgenv().RilzzHub_AutoTrain then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChild("Humanoid")
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
+
+                local currentTool = char and char:FindFirstChildOfClass("Tool")
+                local isHoldingWeight = currentTool and currentTool:FindFirstChild("WeightBar", true)
+
+                if not isHoldingWeight then
+                    if hum then hum:UnequipTools() end
+                    task.wait(0.1)
+                    if backpack and hum then
+                        for _, tool in pairs(backpack:GetChildren()) do
+                            if tool:FindFirstChild("WeightBar", true) then
+                                hum:EquipTool(tool)
+                                break
+                            end
+                        end
+                    end
+                    local xLabel = PlayerGui:FindFirstChild("Backpack")
+                        and PlayerGui.Backpack:FindFirstChild("Bar")
+                        and PlayerGui.Backpack.Bar:FindFirstChild("Slot1")
+                        and PlayerGui.Backpack.Bar.Slot1:FindFirstChild("X_Label")
+                    if xLabel and getconnections then
+                        for _, conn in pairs(getconnections(xLabel.MouseButton1Click)) do
+                            conn:Fire()
+                        end
+                    end
+                else
+                    currentTool:Activate()
+                end
+            end)
+
+            pcall(function()
+                local kickUpgrades = PlayerGui:FindFirstChild("KickUpgrades")
+                if kickUpgrades then
+                    for _, bonus in pairs(kickUpgrades:GetChildren()) do
+                        if bonus.Name == "Bonus" or bonus.Name == "PopBonus" then
+                            if bonus.Visible then
+                                if not bonus:GetAttribute("AutoClicked") then
+                                    bonus:SetAttribute("AutoClicked", true)
+                                    task.spawn(function()
+                                        task.wait(0.2)
+                                        local imgLabel = bonus:FindFirstChild("ImageLabel")
+                                        local targets = {bonus}
+                                        if imgLabel then table.insert(targets, imgLabel) end
+                                        if getconnections then
+                                            for _, target in pairs(targets) do
+                                                pcall(function()
+                                                    for _, conn in pairs(getconnections(target.InputBegan)) do
+                                                        conn:Fire({UserInputType = Enum.UserInputType.MouseButton1, UserInputState = Enum.UserInputState.Begin})
+                                                        conn:Fire({UserInputType = Enum.UserInputType.Touch, UserInputState = Enum.UserInputState.Begin})
+                                                    end
+                                                end)
+                                                pcall(function()
+                                                    for _, conn in pairs(getconnections(target.MouseButton1Click)) do conn:Fire() end
+                                                end)
+                                                pcall(function()
+                                                    for _, conn in pairs(getconnections(target.Activated)) do conn:Fire() end
+                                                end)
+                                            end
+                                        end
+                                    end)
+                                end
+                            else
+                                bonus:SetAttribute("AutoClicked", nil)
+                            end
+                        end
+                    end
+                end
+            end)
         end
     end
 end)
@@ -240,7 +330,6 @@ function runSequence(isFirstRun)
             task.wait(0.5)
 
             if detecting and currentSession == session then
-                -- Cek tool dulu
                 for _, child in ipairs(c:GetChildren()) do
                     if child:IsA("Tool") then
                         onToolDetected(session)
@@ -248,7 +337,6 @@ function runSequence(isFirstRun)
                     end
                 end
 
-                -- Timeout murni 60 detik
                 if tick() - stuckTimer >= 60 then
                     detecting = false
                     isRunning = false
@@ -459,6 +547,7 @@ local function CreateMobileButton()
         getgenv().RilzzHub_AutoCollect = false
         getgenv().RilzzHub_AutoPerfectClaim = false
         getgenv().RilzzHub_AutoSell = false
+        getgenv().RilzzHub_AutoTrain = false
         getgenv().RilzzHub_SkipList = {}
         getgenv().RilzzHub_Loaded = false
         isEnabled = false
