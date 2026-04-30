@@ -198,7 +198,15 @@ end)
 local player = Players.LocalPlayer
 
 local startPosition = Vector3.new(699.768, 3.167, 231.199)
-local afterKickPosition = Vector3.new(-3346.245849609375, 49.99802017211914, 156.2694091796875)
+
+local afterKickPositions = {
+    ["V1"] = Vector3.new(-3345.4482421875,  60, 293.3581237792969),
+    ["V2"] = Vector3.new(-3345.461181640625, 60, 279.287353515625),
+    ["V3"] = Vector3.new(-3345.112060546875, 60, 263.8525390625),
+    ["V4"] = Vector3.new(-3346.064697265625, 60, 248.4613800048828),
+    ["V5"] = Vector3.new(-3345.68603515625,  60, 233.0428924560547),
+    ["V6"] = Vector3.new(-3345.805419921875, 60, 218.72288513183594),
+}
 
 local detecting = false
 local toolConnection
@@ -268,6 +276,7 @@ function runSequence(isFirstRun)
     currentSession += 1
     local session = currentSession
     local currentFinalPos = finalPosition
+    local currentAfterPos = afterKickPositions[selectedVersion] or afterKickPositions["V1"]
 
     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
 
@@ -311,7 +320,7 @@ function runSequence(isFirstRun)
         :WaitForChild("rev_KickEvent")
         :FireServer(unpack(args))
 
-    ok = safeTeleport(rootPart, afterKickPosition, 2, session)
+    ok = safeTeleport(rootPart, currentAfterPos, 2, session)
     if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
 
     local waitStart = tick()
@@ -319,7 +328,7 @@ function runSequence(isFirstRun)
         local elapsed = tick() - waitStart
         if elapsed >= 17 then break end
         local c, rp = getCharacter()
-        rp.CFrame = CFrame.new(afterKickPosition)
+        rp.CFrame = CFrame.new(currentAfterPos)
         task.wait(0.5)
     end
     if not isEnabled or currentSession ~= session then isRunning = false return end
@@ -347,34 +356,36 @@ function runSequence(isFirstRun)
     end)
 
     task.spawn(function()
-        local lastTPSuccess = tick()
+        local detectStart = tick()
 
         while detecting and isEnabled and currentSession == session do
-            local c, rp = getCharacter()
-            rp.CFrame = CFrame.new(currentFinalPos)
-            task.wait(0.5)
-
-            if detecting and currentSession == session then
-                if (rp.Position - currentFinalPos).Magnitude < 10 then
-                    lastTPSuccess = tick()
+            -- Cek timeout DULU sebelum teleport, biar langsung loop ulang ga stuck di koordinat sama
+            if tick() - detectStart >= 60 then
+                detecting = false
+                isRunning = false
+                if toolConnection then toolConnection:Disconnect() toolConnection = nil end
+                task.wait(0.5)
+                if isEnabled and currentSession == session then
+                    task.spawn(function() runSequence(false) end)
                 end
+                return
+            end
 
-                if tick() - lastTPSuccess >= 60 then
-                    detecting = false
-                    isRunning = false
-                    if toolConnection then toolConnection:Disconnect() toolConnection = nil end
-                    task.wait(0.5)
-                    if isEnabled then task.spawn(function() runSequence(false) end) end
+            local c, rp = getCharacter()
+
+            -- Cek tool dulu sebelum teleport
+            for _, child in ipairs(c:GetChildren()) do
+                if child:IsA("Tool") then
+                    onToolDetected(session)
                     return
                 end
-
-                for _, child in ipairs(c:GetChildren()) do
-                    if child:IsA("Tool") then
-                        onToolDetected(session)
-                        return
-                    end
-                end
             end
+
+            if detecting and currentSession == session then
+                rp.CFrame = CFrame.new(currentFinalPos)
+            end
+
+            task.wait(0.5)
         end
     end)
 end
