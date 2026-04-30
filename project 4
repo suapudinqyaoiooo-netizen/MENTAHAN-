@@ -199,13 +199,22 @@ local player = Players.LocalPlayer
 
 local startPosition = Vector3.new(699.768, 3.167, 231.199)
 
-local afterKickPositions = {
-    ["V1"] = Vector3.new(-3345.4482421875,  60, 293.3581237792969),
+local kickAndTp = {
+    ["V1"] = Vector3.new(-3345.4482421875,   60, 293.3581237792969),
     ["V2"] = Vector3.new(-3345.461181640625, 60, 279.287353515625),
     ["V3"] = Vector3.new(-3345.112060546875, 60, 263.8525390625),
     ["V4"] = Vector3.new(-3346.064697265625, 60, 248.4613800048828),
     ["V5"] = Vector3.new(-3345.68603515625,  60, 233.0428924560547),
     ["V6"] = Vector3.new(-3345.805419921875, 60, 218.72288513183594),
+}
+
+local afterKickPositions = {
+    ["V1"] = Vector3.new(858.1185302734375,  60.99802017211914, 265.36846923828125),
+    ["V2"] = Vector3.new(857.8978881835938,  60.99762725830078, 249.6748046875),
+    ["V3"] = Vector3.new(858.3045043945312,  60.99802017211914, 237.13133239746094),
+    ["V4"] = Vector3.new(858.5191650390625,  60.99802017211914, 224.80218505859375),
+    ["V5"] = Vector3.new(858.1254272460938,  60.99802017211914, 217.30581665039062),
+    ["V6"] = Vector3.new(857.933837890625,   60.99802017211914, 209.0582275390625),
 }
 
 local detecting = false
@@ -276,6 +285,7 @@ function runSequence(isFirstRun)
     currentSession += 1
     local session = currentSession
     local currentFinalPos = finalPosition
+    local currentKickTp = kickAndTp[selectedVersion] or kickAndTp["V1"]
     local currentAfterPos = afterKickPositions[selectedVersion] or afterKickPositions["V1"]
 
     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
@@ -313,16 +323,28 @@ function runSequence(isFirstRun)
     end
 
     local args = { [1] = 1 }
+    -- Kick dan TP ke kickAndTp barengan
     game:GetService("ReplicatedStorage")
         :WaitForChild("Shared")
         :WaitForChild("Packages")
         :WaitForChild("Network")
         :WaitForChild("rev_KickEvent")
         :FireServer(unpack(args))
+    rootPart.CFrame = CFrame.new(currentKickTp)
 
-    ok = safeTeleport(rootPart, currentAfterPos, 2, session)
-    if not ok or not isEnabled or currentSession ~= session then isRunning = false return end
+    if not isEnabled or currentSession ~= session then isRunning = false return end
 
+    -- Loop stay di kickAndTp selama 9 detik
+    local kickWaitStart = tick()
+    while isEnabled and currentSession == session do
+        if tick() - kickWaitStart >= 9 then break end
+        local c, rp = getCharacter()
+        rp.CFrame = CFrame.new(currentKickTp)
+        task.wait(0.5)
+    end
+    if not isEnabled or currentSession ~= session then isRunning = false return end
+
+    -- Loop stay di afterKickPositions selama 17 detik
     local waitStart = tick()
     while isEnabled and currentSession == session do
         local elapsed = tick() - waitStart
