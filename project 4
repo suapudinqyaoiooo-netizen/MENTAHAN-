@@ -49,6 +49,30 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
+-- ================= VERSION POSITIONS =================
+local versionPositions = {
+    ["V1"] = Vector3.new(702.5642700195312, 11.9980316162109375, 276.54937744140625),
+    ["V2"] = Vector3.new(703.025634765625,  11.998032569885254,  264.5818176269531),
+    ["V3"] = Vector3.new(702.874755859375,  11.998032569885254,  254.43328857421875),
+    ["V4"] = Vector3.new(702.755615234375,  11.998032569885254,  240.62379174804688),
+    ["V5"] = Vector3.new(701.6677856445312, 11.998032569885254,  227.19163513183594),
+    ["V6"] = Vector3.new(701.6296997070312, 11.998032569885254,  214.33778381347656),
+}
+
+local selectedVersion = "V1"
+local finalPosition = versionPositions[selectedVersion]
+
+Tabs.Main:AddDropdown("VersionSelector", {
+    Title = "Pilih Version (Claim Position)",
+    Values = {"V1", "V2", "V3", "V4", "V5", "V6"},
+    Multi = false,
+    Default = "V1",
+    Callback = function(Value)
+        selectedVersion = Value
+        finalPosition = versionPositions[Value]
+    end
+})
+
 -- ================= TOGGLE AUTO COLLECT =================
 Tabs.Main:AddToggle("AutoCollect", {
     Title = "Auto Collect",
@@ -173,9 +197,8 @@ end)
 -- ================= SC KICK SCRIPT =================
 local player = Players.LocalPlayer
 
-local finalPosition = Vector3.new(703.29931640625, 11.34885025024414, 214.4062957763672)
 local startPosition = Vector3.new(699.768, 3.167, 231.199)
-local afterKickPosition = Vector3.new(-3175.41943359375, 49.99802017211914, 157.18048095703125)
+local afterKickPosition = Vector3.new(-3346.245849609375, 49.99802017211914, 156.2694091796875)
 
 local detecting = false
 local toolConnection
@@ -244,15 +267,16 @@ function runSequence(isFirstRun)
     detecting = false
     currentSession += 1
     local session = currentSession
+    local currentFinalPos = finalPosition
 
     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
 
     local character, rootPart, humanoid = getCharacter()
 
     if isFirstRun then
-        task.wait(2)
+        task.wait(0.6) -- awal ON lebih cepat
     else
-        task.wait(0.5)
+        task.wait(0.3)
     end
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
@@ -268,7 +292,8 @@ function runSequence(isFirstRun)
         return
     end
 
-    task.wait(0.6)
+    -- startPosition wait lebih lama
+    task.wait(1.5)
     if not isEnabled or currentSession ~= session then isRunning = false return end
 
     if (rootPart.Position - startPosition).Magnitude > 10 then
@@ -322,28 +347,32 @@ function runSequence(isFirstRun)
     end)
 
     task.spawn(function()
-        local stuckTimer = tick()
+        local lastTPSuccess = tick()
 
         while detecting and isEnabled and currentSession == session do
             local c, rp = getCharacter()
-            rp.CFrame = CFrame.new(finalPosition)
+            rp.CFrame = CFrame.new(currentFinalPos)
             task.wait(0.5)
 
             if detecting and currentSession == session then
-                for _, child in ipairs(c:GetChildren()) do
-                    if child:IsA("Tool") then
-                        onToolDetected(session)
-                        return
-                    end
+                if (rp.Position - currentFinalPos).Magnitude < 10 then
+                    lastTPSuccess = tick()
                 end
 
-                if tick() - stuckTimer >= 60 then
+                if tick() - lastTPSuccess >= 60 then
                     detecting = false
                     isRunning = false
                     if toolConnection then toolConnection:Disconnect() toolConnection = nil end
                     task.wait(0.5)
                     if isEnabled then task.spawn(function() runSequence(false) end) end
                     return
+                end
+
+                for _, child in ipairs(c:GetChildren()) do
+                    if child:IsA("Tool") then
+                        onToolDetected(session)
+                        return
+                    end
                 end
             end
         end
@@ -353,7 +382,6 @@ end
 -- ================= CHARACTER ADDED =================
 player.CharacterAdded:Connect(function(newCharacter)
     if isEnabled then
-        -- Cancel semua loop lama DULU sebelum apapun
         currentSession += 1
         local session = currentSession
 
@@ -365,7 +393,6 @@ player.CharacterAdded:Connect(function(newCharacter)
         newCharacter:WaitForChild("Humanoid")
         task.wait(2)
 
-        -- Cek session masih sama setelah wait
         if isEnabled and currentSession == session then
             runSequence(false)
         end
@@ -383,7 +410,7 @@ Tabs.Main:AddToggle("AutoPerfectClaim", {
             isRunning = false
             detecting = false
             task.spawn(function()
-                task.wait(2)
+                task.wait(0.6) -- awal ON lebih cepat
                 if isEnabled then
                     runSequence(true)
                 end
