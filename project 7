@@ -60,17 +60,14 @@ local function runCycle(sid)
 
     while tick() - t0 < 3 do
         if not isActive(sid) then return end
-
         char = player.Character
         if char then
             char:PivotTo(CFrame.new(startPos))
         end
-
         if detectUnbox(0.01, sid) then
             detected = true
             break
         end
-
         task.wait(0.005)
     end
 
@@ -78,16 +75,12 @@ local function runCycle(sid)
 
     if detected then
         remoteUnbox:FireServer()
-
         task.wait(0.05)
         if not isActive(sid) then return end
-
         char = player.Character or player.CharacterAdded:Wait()
         if not isActive(sid) then return end
-
         task.wait(0.05)
         if not isActive(sid) then return end
-
         local t1 = tick()
         while tick() - t1 < 1 do
             if not isActive(sid) then return end
@@ -111,6 +104,30 @@ local function forceReset()
     end)
 end
 
+local function fixCamera()
+    -- loop paksa kamera custom selama 3 detik
+    task.spawn(function()
+        local t = tick()
+        while tick() - t < 3 do
+            pcall(function()
+                local cam = workspace.CurrentCamera
+                local char = player.Character
+                if cam and char then
+                    cam.CameraType = Enum.CameraType.Custom
+                    cam.CameraSubject = char:FindFirstChildOfClass("Humanoid")
+                end
+            end)
+            task.wait(0.1)
+        end
+    end)
+end
+
+local function doHome()
+    pcall(function() remoteHome:FireServer() end)
+    task.wait(0.5)
+    fixCamera()
+end
+
 local function stopAll()
     autoBrainrotEnabled = false
     sessionId = sessionId + 1
@@ -121,7 +138,6 @@ local function stopAll()
 
     task.spawn(function()
         local respawned = false
-
         local conn = player.CharacterAdded:Connect(function()
             respawned = true
         end)
@@ -134,12 +150,11 @@ local function stopAll()
         end
 
         conn:Disconnect()
-        task.wait(0.3)
 
         if respawned then
-            pcall(function() remoteHome:FireServer() end)
+            task.wait(0.5)
+            doHome()
         else
-            -- ga respawn: spam reset ronde 2
             local respawned2 = false
             local conn2 = player.CharacterAdded:Connect(function()
                 respawned2 = true
@@ -153,12 +168,13 @@ local function stopAll()
             end
 
             conn2:Disconnect()
-            task.wait(0.3)
+            task.wait(0.5)
 
             for i = 1, 5 do
                 pcall(function() remoteHome:FireServer() end)
                 task.wait(0.1)
             end
+            fixCamera()
         end
     end)
 end
