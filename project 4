@@ -675,6 +675,6 @@ Window:SelectTab(1)
 
 Fluent:Notify({
     Title   = "Kick A Lucky Block",
-    Content = "Loaded Successfully | Rilzz x Fartez",
+    Content = "Loaded Successfully | Rilzz x ConCXx",
     Duration = 5
 })
