@@ -1,20 +1,41 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+-- ═══════════════════════════════════════
+--             SERVICES
+-- ═══════════════════════════════════════
 
-local window = library:CreateWindow("Chase A Lucky blocks")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local rs = ReplicatedStorage
+
+-- ═══════════════════════════════════════
+--             REMOTES
+-- ═══════════════════════════════════════
+
+local Remotes = rs:WaitForChild("Remotes"):WaitForChild("ClientToServer")
+local PickupRemote = Remotes:WaitForChild("Prompt"):WaitForChild("PickupRemote")
+local remoteStart = Remotes:WaitForChild("StartLineCrossed")
+local remoteUnbox = Remotes:WaitForChild("UnboxAnimationDone")
+local remoteHome = Remotes:WaitForChild("HomeTeleport")
+local UpdateTriggered = Remotes:WaitForChild("UpdateTriggered")
+
+-- ═══════════════════════════════════════
+--             STATE
+-- ═══════════════════════════════════════
 
 local autoBrainrotEnabled = false
 local sessionId = 0
 local activeThread = nil
-
-local player = game.Players.LocalPlayer
-local rs = game:GetService("ReplicatedStorage")
-
-local remoteStart = rs:WaitForChild("Remotes"):WaitForChild("ClientToServer"):WaitForChild("StartLineCrossed")
-local remoteUnbox = rs:WaitForChild("Remotes"):WaitForChild("ClientToServer"):WaitForChild("UnboxAnimationDone")
-local remoteHome = rs:WaitForChild("Remotes"):WaitForChild("ClientToServer"):WaitForChild("HomeTeleport")
-
 local startPos = Vector3.new(-26.3287, 30.7480, -2136.2717)
 local endPos = Vector3.new(-228.90187, 4.16676, 575.27209)
+
+local selectedUpgradeSlot = 1
+local isUpgradeRunning = false
+local isCollectRunning = false
+
+-- ═══════════════════════════════════════
+--        AUTO BRAINROT HELPERS
+-- ═══════════════════════════════════════
 
 local function isActive(sid)
     return autoBrainrotEnabled and sessionId == sid
@@ -23,17 +44,15 @@ end
 local function detectUnbox(timeout, sid)
     local gui = player:WaitForChild("PlayerGui")
     local before = {}
-    for _,v in pairs(gui:GetDescendants()) do
+    for _, v in pairs(gui:GetDescendants()) do
         before[v] = true
     end
     local t0 = tick()
     while tick() - t0 < timeout do
         if not isActive(sid) then return false end
         task.wait(0.005)
-        for _,v in pairs(gui:GetDescendants()) do
-            if not before[v] then
-                return true
-            end
+        for _, v in pairs(gui:GetDescendants()) do
+            if not before[v] then return true end
         end
     end
     return false
@@ -41,33 +60,23 @@ end
 
 local function runCycle(sid)
     if not isActive(sid) then return end
-
     local char = player.Character or player.CharacterAdded:Wait()
     if not isActive(sid) then return end
 
-    remoteStart:FireServer()
-    task.wait(0.01)
+    remoteStart:FireServer() task.wait(0.01)
     if not isActive(sid) then return end
-    remoteStart:FireServer()
-    task.wait(0.01)
+    remoteStart:FireServer() task.wait(0.01)
     if not isActive(sid) then return end
-    remoteStart:FireServer()
-    task.wait(0.01)
+    remoteStart:FireServer() task.wait(0.01)
     if not isActive(sid) then return end
 
     local detected = false
     local t0 = tick()
-
     while tick() - t0 < 3 do
         if not isActive(sid) then return end
         char = player.Character
-        if char then
-            char:PivotTo(CFrame.new(startPos))
-        end
-        if detectUnbox(0.01, sid) then
-            detected = true
-            break
-        end
+        if char then char:PivotTo(CFrame.new(startPos)) end
+        if detectUnbox(0.01, sid) then detected = true break end
         task.wait(0.005)
     end
 
@@ -85,27 +94,13 @@ local function runCycle(sid)
         while tick() - t1 < 1 do
             if not isActive(sid) then return end
             char = player.Character
-            if char then
-                char:PivotTo(CFrame.new(endPos))
-            end
+            if char then char:PivotTo(CFrame.new(endPos)) end
             task.wait(0.005)
         end
     end
 end
 
-local function forceReset()
-    pcall(function() player:LoadCharacter() end)
-    pcall(function()
-        local char = player.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.Health = 0 end
-        end
-    end)
-end
-
 local function fixCamera()
-    -- loop paksa kamera custom selama 3 detik
     task.spawn(function()
         local t = tick()
         while tick() - t < 3 do
@@ -118,6 +113,17 @@ local function fixCamera()
                 end
             end)
             task.wait(0.1)
+        end
+    end)
+end
+
+local function forceReset()
+    pcall(function() player:LoadCharacter() end)
+    pcall(function()
+        local char = player.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.Health = 0 end
         end
     end)
 end
@@ -135,41 +141,28 @@ local function stopAll()
         pcall(task.cancel, activeThread)
         activeThread = nil
     end
-
     task.spawn(function()
         local respawned = false
-        local conn = player.CharacterAdded:Connect(function()
-            respawned = true
-        end)
-
+        local conn = player.CharacterAdded:Connect(function() respawned = true end)
         local t0 = tick()
         while tick() - t0 < 3 do
-            forceReset()
-            task.wait(0.2)
+            forceReset() task.wait(0.2)
             if respawned then break end
         end
-
         conn:Disconnect()
-
         if respawned then
             task.wait(0.5)
             doHome()
         else
             local respawned2 = false
-            local conn2 = player.CharacterAdded:Connect(function()
-                respawned2 = true
-            end)
-
+            local conn2 = player.CharacterAdded:Connect(function() respawned2 = true end)
             local t1 = tick()
             while tick() - t1 < 3 do
-                forceReset()
-                task.wait(0.2)
+                forceReset() task.wait(0.2)
                 if respawned2 then break end
             end
-
             conn2:Disconnect()
             task.wait(0.5)
-
             for i = 1, 5 do
                 pcall(function() remoteHome:FireServer() end)
                 task.wait(0.1)
@@ -179,9 +172,94 @@ local function stopAll()
     end)
 end
 
-window:AddToggle({
+-- ═══════════════════════════════════════
+--        AUTO UPGRADE
+-- ═══════════════════════════════════════
+
+local function runUpgradeLoop()
+    isUpgradeRunning = true
+    while isUpgradeRunning do
+        pcall(function()
+            UpdateTriggered:FireServer(selectedUpgradeSlot)
+        end)
+        task.wait(0.1)
+    end
+end
+
+-- ═══════════════════════════════════════
+--        AUTO COLLECT
+-- ═══════════════════════════════════════
+
+local collectKeywords = {"pad"}
+
+local function isCollectTarget(part)
+    if not part:IsA("BasePart") then return false end
+    local name = part.Name:lower()
+    for _, k in ipairs(collectKeywords) do
+        if name:find(k) then return true end
+    end
+    return false
+end
+
+local function doCollect()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isCollectTarget(obj) then
+            pcall(function()
+                firetouchinterest(hrp, obj, 0)
+                firetouchinterest(hrp, obj, 1)
+            end)
+        end
+    end
+end
+
+local function runCollectLoop()
+    isCollectRunning = true
+    while isCollectRunning do
+        pcall(doCollect)
+        task.wait(2)
+    end
+end
+
+-- ═══════════════════════════════════════
+--          GUI - TORA LIBRARY
+-- ═══════════════════════════════════════
+
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+local win = lib:CreateWindow("Chase A Lucky Blocks")
+
+-- 1. Upgrade Slot (selector 1–40)
+local upgradeSlotValues = {}
+for i = 1, 40 do table.insert(upgradeSlotValues, tostring(i)) end
+
+win:AddList({
+    text = "Upgrade Slot",
+    flag = "upgradeSlot",
+    value = "1",
+    values = upgradeSlotValues,
+    callback = function(value)
+        selectedUpgradeSlot = tonumber(value) or 1
+    end
+})
+
+-- 2. Pickup All
+win:AddButton({
+    text = "Pickup All",
+    callback = function()
+        task.spawn(function()
+            for i = 1, 40 do
+                PickupRemote:FireServer(i)
+                task.wait(0.05)
+            end
+        end)
+    end
+})
+
+-- 3. Auto Brainrot
+win:AddToggle({
     text = "Auto Brainrot",
-    state = false,
+    state = autoBrainrotEnabled,
     callback = function(state)
         if state then
             stopAll()
@@ -200,6 +278,32 @@ window:AddToggle({
     end
 })
 
-window:AddLabel({text = "Credit : Rilzzhub"})
+-- 4. Auto Collect
+win:AddToggle({
+    text = "Auto Collect",
+    state = false,
+    callback = function(state)
+        if state then
+            task.spawn(runCollectLoop)
+        else
+            isCollectRunning = false
+        end
+    end
+})
 
-library:Init()
+-- 5. Auto Upgrade
+win:AddToggle({
+    text = "Auto Upgrade",
+    state = false,
+    callback = function(state)
+        if state then
+            task.spawn(runUpgradeLoop)
+        else
+            isUpgradeRunning = false
+        end
+    end
+})
+
+win:AddLabel({text = "Credit : Rilzzhub"})
+
+lib:Init()
