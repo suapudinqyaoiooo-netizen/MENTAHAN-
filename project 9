@@ -1,0 +1,115 @@
+-- be a lucky block for playtime plopy 5
+-- Script by: Tora Library
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+
+-- ========================
+-- Window
+-- ========================
+local Window = library:CreateWindow("Lucky Block | Playtime Plopy 5")
+
+-- ========================
+-- Button: Get Op Brainrot
+-- ========================
+Window:AddButton({
+    text = "Get Op ",
+    callback = function()
+        local args = {
+            [1] = "ThePrototype",
+            [2] = "Celestial",
+            [3] = "Exclusive"
+        }
+        game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("RewardEscape"):FireServer(unpack(args))
+    end
+})
+
+-- ========================
+-- Toggle: Auto Collect
+-- ========================
+local autoCollectEnabled = false
+
+Window:AddToggle({
+    text = "Auto Collect",
+    state = false,
+    callback = function(state)
+        autoCollectEnabled = state
+    end
+})
+
+-- Auto Collect Loop
+task.spawn(function()
+    local player = game.Players.LocalPlayer
+
+    local function getChar()
+        return player.Character or player.CharacterAdded:Wait()
+    end
+
+    local function getPart()
+        return getChar():WaitForChild("HumanoidRootPart")
+    end
+
+    local keywords = {"collect", "coin", "pad", "reward"}
+
+    local function isTarget(part)
+        if not part:IsA("BasePart") then return false end
+        local name = part.Name:lower()
+        for _, k in ipairs(keywords) do
+            if name:find(k) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function collect()
+        local hrp = getPart()
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if isTarget(obj) then
+                firetouchinterest(hrp, obj, 0)
+                firetouchinterest(hrp, obj, 1)
+            end
+        end
+    end
+
+    while true do
+        if autoCollectEnabled then
+            pcall(collect)
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- ========================
+-- Toggle: Auto Rebirth
+-- ========================
+local autoRebirthEnabled = false
+
+Window:AddToggle({
+    text = "Auto Rebirth",
+    state = false,
+    callback = function(state)
+        autoRebirthEnabled = state
+    end
+})
+
+-- Auto Rebirth Loop
+task.spawn(function()
+    while true do
+        if autoRebirthEnabled then
+            pcall(function()
+                game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("RequestRebirth"):FireServer()
+            end)
+        end
+        task.wait(0.1)
+    end
+end)
+
+-- ========================
+-- Label: Credit
+-- ========================
+Window:AddLabel({text = "Credit : Rilzzhub"})
+
+-- ========================
+-- Init GUI
+-- ========================
+library:Init()
