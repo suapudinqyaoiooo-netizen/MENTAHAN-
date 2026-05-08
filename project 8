@@ -1,0 +1,83 @@
+local player = game:GetService("Players").LocalPlayer
+local backpack = player:WaitForChild("Backpack")
+local character = player.Character or player.CharacterAdded:Wait()
+local re = game:GetService("ReplicatedStorage").Events.Game.PlaceBrainrot
+
+-- Load Tora Library
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+
+local knownBrainrots = {}
+local selectedId = nil
+local selectedName = nil
+
+-- Buat window
+local window = library:CreateWindow("Tire Fling For Brainrot")
+
+-- List dropdown brainrot
+local brainrotList = window:AddList({
+    text = "Select Brainrot",
+    values = {},
+    value = "None",
+    flag = "brainrot_select",
+    callback = function(value)
+        -- Cari id dari nama yang dipilih
+        for _, data in pairs(knownBrainrots) do
+            if data.name == value then
+                selectedId = data.id
+                selectedName = data.name
+                break
+            end
+        end
+    end
+})
+
+-- Tombol Place
+window:AddButton({
+    text = "⚡ Place Brainrot",
+    callback = function()
+        if not selectedId then return end
+        re:FireServer(selectedId, 1, 1)
+    end
+})
+
+-- Init library
+library:Init()
+
+-- Fungsi tambah brainrot ke list (tidak duplikat)
+local function addBrainrot(name, id)
+    for _, data in pairs(knownBrainrots) do
+        if data.id == id then return end
+    end
+    table.insert(knownBrainrots, {name = name, id = id})
+    brainrotList:AddValue(name)
+    -- Set default pilihan pertama
+    if #knownBrainrots == 1 then
+        brainrotList:SetValue(name)
+    end
+end
+
+-- Scan backpack & karakter
+local function scanTools(parent)
+    for _, tool in pairs(parent:GetChildren()) do
+        local itemType = tool:GetAttribute("itemType")
+        local name = tool:GetAttribute("itemName")
+        local id = tool:GetAttribute("instanceId")
+        if itemType == "brainrot" and name and id then
+            addBrainrot(name, id)
+        end
+    end
+end
+
+scanTools(backpack)
+scanTools(character)
+
+-- Auto detect brainrot baru
+backpack.ChildAdded:Connect(function(tool)
+    task.wait(0.1)
+    local itemType = tool:GetAttribute("itemType")
+    local name = tool:GetAttribute("itemName")
+    local id = tool:GetAttribute("instanceId")
+    if itemType == "brainrot" and name and id then
+        addBrainrot(name, id)
+    end
+end)
