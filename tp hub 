@@ -3,12 +3,8 @@
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
 
--- ========================
--- Window
--- ========================
 local Window = library:CreateWindow("Tp Hub")
 
--- Variable global buat stop connection
 local moveConnection = nil
 
 -- ========================
@@ -17,10 +13,10 @@ local moveConnection = nil
 Window:AddButton({
     text = "Start",
     callback = function()
-        -- Stop gerak dulu kalau lagi jalan
         if moveConnection then
-            moveConnection:Disconnect()
+            local c = moveConnection
             moveConnection = nil
+            c:Disconnect()
         end
 
         local player = game.Players.LocalPlayer
@@ -36,10 +32,10 @@ Window:AddButton({
 Window:AddButton({
     text = "Target",
     callback = function()
-        -- Stop connection lama kalau ada
         if moveConnection then
-            moveConnection:Disconnect()
+            local c = moveConnection
             moveConnection = nil
+            c:Disconnect()
         end
 
         local player = game.Players.LocalPlayer
@@ -50,29 +46,42 @@ Window:AddButton({
         local targetPos = Vector3.new(-0.44302725791931115, 2.999999761581421, -12131.9423828125)
         local flatDir = Vector3.new(targetPos.X - hrp.Position.X, 0, targetPos.Z - hrp.Position.Z).Unit
 
-        -- Paksa hadap target dulu
         hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + flatDir)
         task.wait(0.1)
 
+        local running = true
+
         moveConnection = game:GetService("RunService").Heartbeat:Connect(function(dt)
-            if not char or not hrp or not hrp.Parent then
-                moveConnection:Disconnect()
-                moveConnection = nil
+            if not running then return end
+            if not hrp or not hrp.Parent then
+                running = false
+                if moveConnection then
+                    local c = moveConnection
+                    moveConnection = nil
+                    c:Disconnect()
+                end
                 return
             end
 
-            local dist = (Vector3.new(hrp.Position.X, 0, hrp.Position.Z) - Vector3.new(targetPos.X, 0, targetPos.Z)).Magnitude
+            local dist = math.abs(hrp.Position.Z - targetPos.Z)
             if dist < 3 then
-                -- Sampai! Stop total
-                moveConnection:Disconnect()
-                moveConnection = nil
+                running = false
                 hrp.CFrame = CFrame.new(targetPos.X, hrp.Position.Y, targetPos.Z) * CFrame.Angles(0, math.atan2(flatDir.X, flatDir.Z), 0)
+                if moveConnection then
+                    local c = moveConnection
+                    moveConnection = nil
+                    c:Disconnect()
+                end
                 return
             end
 
             local speed = humanoid.WalkSpeed
             local step = flatDir * speed * dt
-            hrp.CFrame = CFrame.new(hrp.Position.X + step.X, hrp.Position.Y, hrp.Position.Z + step.Z) * CFrame.Angles(0, math.atan2(flatDir.X, flatDir.Z), 0)
+            hrp.CFrame = CFrame.new(
+                hrp.Position.X + step.X,
+                hrp.Position.Y,
+                hrp.Position.Z + step.Z
+            ) * CFrame.Angles(0, math.atan2(flatDir.X, flatDir.Z), 0)
         end)
     end
 })
@@ -82,8 +91,4 @@ Window:AddButton({
 -- ========================
 Window:AddLabel({text = "Credit : Rilzzhub"})
 
--- ========================
--- Init GUI
--- ========================
 library:Init()
-
