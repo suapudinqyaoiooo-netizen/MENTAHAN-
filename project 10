@@ -1,0 +1,36 @@
+-- RILZZ HUB | Tora Library
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+
+-- Buat Window
+local Window = library:CreateWindow("RILZZ HUB")
+
+-- Semua mutation sebagai toggle dengan loop task.wait(0.1)
+local mutations = {
+    "Normal", "Gold", "Diamond", "Rainbow",
+    "Candy", "Lava", "Blizzard", "Lightning", "Hacker"
+}
+
+for _, mutName in ipairs(mutations) do
+    Window:AddToggle({
+        text = mutName,
+        state = false,
+        flag = mutName,
+        callback = function(state)
+            if state then
+                task.spawn(function()
+                    while library.flags[mutName] do
+                        game:GetService("ReplicatedStorage"):WaitForChild("ApplyMutation"):FireServer(mutName)
+                        task.wait(0.1)
+                    end
+                end)
+            end
+        end
+    })
+end
+
+-- Credit
+Window:AddLabel({ text = "Credit : Rilzz" })
+
+-- Inisialisasi UI
+library:Init()
