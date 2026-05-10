@@ -1,17 +1,19 @@
-
 -- RILZZ HUB | Tora Library
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew", true))()
 
 local Window = library:CreateWindow("RILZZ HUB")
-local folder = Window:AddFolder("Settings")
+
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
 
 -- =====================
--- MUTATION (AddList / Dropdown)
+-- FOLDER: MUTATION
 -- =====================
+local mutFolder = Window:AddFolder("Mutation")
 local selectedMutation = "Normal"
 
-folder:AddList({
+mutFolder:AddList({
     text = "Mutation",
     values = {"Normal", "Gold", "Diamond", "Rainbow", "Candy", "Lava", "Blizzard", "Lightning", "Hacker"},
     flag = "SelectedMutation",
@@ -21,15 +23,15 @@ folder:AddList({
     end
 })
 
-folder:AddToggle({
+mutFolder:AddToggle({
     text = "Apply Mutation",
     flag = "ApplyMutationToggle",
     callback = function(state)
         if state then
             task.spawn(function()
                 while library.flags["ApplyMutationToggle"] do
-                    game:GetService("ReplicatedStorage"):WaitForChild("ApplyMutation"):FireServer(selectedMutation)
-                    task.wait(0.1) -- ganti sesuai kebutuhan
+                    RS:WaitForChild("ApplyMutation"):FireServer(selectedMutation)
+                    task.wait(0.1)
                 end
             end)
         end
@@ -37,24 +39,18 @@ folder:AddToggle({
 })
 
 -- =====================
--- AUTO BRAINROT
+-- FOLDER: AUTO BRAINROT
 -- =====================
-
+local brainrotFolder = Window:AddFolder("Auto Brainrot")
 local TARGET_POSITION = Vector3.new(3.1586, 2.9999997, -12032.942)
-
-local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
 
 local function teleportToTarget()
     local player = Players.LocalPlayer
-
-    -- Tunggu sampai character ada
     local char = player.Character or player.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
-
     if hrp then
         hrp.CFrame = CFrame.new(TARGET_POSITION)
-        task.wait(0.3) -- kasih jeda biar server register posisi
+        task.wait(0.3)
     end
 end
 
@@ -70,23 +66,143 @@ local function runC()
     RS:WaitForChild("DashEvent"):FireServer("ClearDash")
 end
 
-folder:AddToggle({
+brainrotFolder:AddToggle({
     text = "Auto Brainrot",
     flag = "AutoBrainrot",
     callback = function(state)
         if state then
             task.spawn(function()
                 while library.flags["AutoBrainrot"] do
-                    teleportToTarget()  -- TP ke koordinat
+                    teleportToTarget()
+                    runA()
+                    task.wait(1)
+                    runB()
+                    task.wait(3)
+                    runC()
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
+})
 
-                    runA()             -- jalankan A
-                    task.wait(1)       -- tunggu 1 detik
+-- =====================
+-- FOLDER: SELL BRAINROT
+-- =====================
+local sellFolder = Window:AddFolder("Sell Brainrot")
 
-                    runB()             -- jalankan B
-                    task.wait(3)       -- tunggu 3 detik
+local brainrotList = {
+    "Tik_Tak_Sahur",
+    "Blueberrinni_Octopusini",
+    "Graipussi_Medussi",
+    "Pakrahmatmamat",
+    "Chicleteira_Bicicleteira",
+}
 
-                    runC()             -- jalankan C
-                    task.wait(0.5)     -- jeda sebelum loop ulang
+local whitelist = {}
+local selectedSkip = brainrotList[1]
+
+sellFolder:AddList({
+    text = "Pilih Brainrot",
+    values = brainrotList,
+    flag = "SelectedSkip",
+    open = false,
+    callback = function(value)
+        selectedSkip = value
+    end
+})
+
+sellFolder:AddButton({
+    text = "Add to Skip List",
+    flag = "AddSkip",
+    callback = function()
+        if not whitelist[selectedSkip] then
+            whitelist[selectedSkip] = true
+            print("✅ Skip: " .. selectedSkip)
+        else
+            print("⚠️ Sudah ada: " .. selectedSkip)
+        end
+        local list = ""
+        for name in pairs(whitelist) do
+            list = list .. "\n  - " .. name
+        end
+        print("📋 Skip list:" .. list)
+    end
+})
+
+sellFolder:AddButton({
+    text = "Remove from Skip List",
+    flag = "RemoveSkip",
+    callback = function()
+        if whitelist[selectedSkip] then
+            whitelist[selectedSkip] = nil
+            print("🗑️ Removed: " .. selectedSkip)
+        else
+            print("⚠️ Tidak ada di skip list: " .. selectedSkip)
+        end
+    end
+})
+
+sellFolder:AddButton({
+    text = "Clear Skip List",
+    flag = "ClearSkip",
+    callback = function()
+        whitelist = {}
+        print("🗑️ Skip list cleared!")
+    end
+})
+
+local function sellAll()
+    local SellEvent = RS:WaitForChild("Remotes"):WaitForChild("SellEvent")
+    local player = Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local backpack = player.Backpack
+    local sold, skipped = 0, 0
+
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            if whitelist[tool.Name] then
+                skipped += 1
+            else
+                SellEvent:FireServer(tool)
+                sold += 1
+                task.wait(0.1)
+            end
+        end
+    end
+
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            if whitelist[tool.Name] then
+                skipped += 1
+            else
+                SellEvent:FireServer(tool)
+                sold += 1
+                task.wait(0.1)
+            end
+        end
+    end
+
+    print("✅ Sold: " .. sold .. " | Skipped: " .. skipped)
+end
+
+sellFolder:AddButton({
+    text = "Sell Now",
+    flag = "SellNow",
+    callback = function()
+        sellAll()
+    end
+})
+
+sellFolder:AddToggle({
+    text = "Auto Sell",
+    flag = "AutoSell",
+    callback = function(state)
+        if state then
+            task.spawn(function()
+                while library.flags["AutoSell"] do
+                    sellAll()
+                    task.wait(0.1)
                 end
             end)
         end
@@ -96,6 +212,7 @@ folder:AddToggle({
 -- =====================
 -- CREDIT
 -- =====================
-folder:AddLabel({ text = "Credit : Rilzz" })
+local creditFolder = Window:AddFolder("Info")
+creditFolder:AddLabel({ text = "Credit : Rilzz" })
 
 library:Init()
