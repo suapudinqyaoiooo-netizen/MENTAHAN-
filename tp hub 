@@ -5,7 +5,7 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebe
 
 local Window = library:CreateWindow("Tp Hub")
 
-local moveConnection = nil
+local isMoving = false
 
 -- ========================
 -- Button: Start
@@ -13,11 +13,7 @@ local moveConnection = nil
 Window:AddButton({
     text = "Start",
     callback = function()
-        if moveConnection then
-            local c = moveConnection
-            moveConnection = nil
-            c:Disconnect()
-        end
+        isMoving = false
 
         local player = game.Players.LocalPlayer
         local char = player.Character or player.CharacterAdded:Wait()
@@ -32,56 +28,38 @@ Window:AddButton({
 Window:AddButton({
     text = "Target",
     callback = function()
-        if moveConnection then
-            local c = moveConnection
-            moveConnection = nil
-            c:Disconnect()
-        end
+        if isMoving then return end
+        isMoving = true
 
-        local player = game.Players.LocalPlayer
-        local char = player.Character or player.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        local humanoid = char:WaitForChild("Humanoid")
+        task.spawn(function()
+            local player = game.Players.LocalPlayer
+            local char = player.Character or player.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
 
-        local targetPos = Vector3.new(-0.44302725791931115, 2.999999761581421, -12131.9423828125)
-        local flatDir = Vector3.new(targetPos.X - hrp.Position.X, 0, targetPos.Z - hrp.Position.Z).Unit
+            local targetPos = Vector3.new(-0.44302725791931115, 2.999999761581421, -12131.9423828125)
+            local stepSize = 10 -- studs per step
+            local delay = 0.03  -- jeda per step
 
-        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + flatDir)
-        task.wait(0.1)
+            while isMoving do
+                if not hrp or not hrp.Parent then break end
 
-        local running = true
+                local currentPos = hrp.Position
+                local diff = Vector3.new(targetPos.X - currentPos.X, 0, targetPos.Z - currentPos.Z)
+                local dist = diff.Magnitude
 
-        moveConnection = game:GetService("RunService").Heartbeat:Connect(function(dt)
-            if not running then return end
-            if not hrp or not hrp.Parent then
-                running = false
-                if moveConnection then
-                    local c = moveConnection
-                    moveConnection = nil
-                    c:Disconnect()
+                if dist <= stepSize then
+                    -- Sampai, snap ke target lalu stop
+                    hrp.CFrame = CFrame.new(targetPos.X, currentPos.Y, targetPos.Z)
+                    isMoving = false
+                    break
                 end
-                return
-            end
 
-            local dist = math.abs(hrp.Position.Z - targetPos.Z)
-            if dist < 3 then
-                running = false
-                hrp.CFrame = CFrame.new(targetPos.X, hrp.Position.Y, targetPos.Z) * CFrame.Angles(0, math.atan2(flatDir.X, flatDir.Z), 0)
-                if moveConnection then
-                    local c = moveConnection
-                    moveConnection = nil
-                    c:Disconnect()
-                end
-                return
-            end
+                local dir = diff.Unit
+                local nextPos = Vector3.new(currentPos.X + dir.X * stepSize, currentPos.Y, currentPos.Z + dir.Z * stepSize)
+                hrp.CFrame = CFrame.new(nextPos, nextPos + dir)
 
-            local speed = humanoid.WalkSpeed
-            local step = flatDir * speed * dt
-            hrp.CFrame = CFrame.new(
-                hrp.Position.X + step.X,
-                hrp.Position.Y,
-                hrp.Position.Z + step.Z
-            ) * CFrame.Angles(0, math.atan2(flatDir.X, flatDir.Z), 0)
+                task.wait(delay)
+            end
         end)
     end
 })
