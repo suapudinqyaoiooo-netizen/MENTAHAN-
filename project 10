@@ -1,36 +1,101 @@
+
 -- RILZZ HUB | Tora Library
 
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/liebertsx/Tora-Library/main/src/librarynew", true))()
 
--- Buat Window
 local Window = library:CreateWindow("RILZZ HUB")
+local folder = Window:AddFolder("Settings")
 
--- Semua mutation sebagai toggle dengan loop task.wait(0.1)
-local mutations = {
-    "Normal", "Gold", "Diamond", "Rainbow",
-    "Candy", "Lava", "Blizzard", "Lightning", "Hacker"
-}
+-- =====================
+-- MUTATION (AddList / Dropdown)
+-- =====================
+local selectedMutation = "Normal"
 
-for _, mutName in ipairs(mutations) do
-    Window:AddToggle({
-        text = mutName,
-        state = false,
-        flag = mutName,
-        callback = function(state)
-            if state then
-                task.spawn(function()
-                    while library.flags[mutName] do
-                        game:GetService("ReplicatedStorage"):WaitForChild("ApplyMutation"):FireServer(mutName)
-                        task.wait(0.1)
-                    end
-                end)
-            end
+folder:AddList({
+    text = "Mutation",
+    values = {"Normal", "Gold", "Diamond", "Rainbow", "Candy", "Lava", "Blizzard", "Lightning", "Hacker"},
+    flag = "SelectedMutation",
+    open = false,
+    callback = function(value)
+        selectedMutation = value
+    end
+})
+
+folder:AddToggle({
+    text = "Apply Mutation",
+    flag = "ApplyMutationToggle",
+    callback = function(state)
+        if state then
+            task.spawn(function()
+                while library.flags["ApplyMutationToggle"] do
+                    game:GetService("ReplicatedStorage"):WaitForChild("ApplyMutation"):FireServer(selectedMutation)
+                    task.wait(0.1) -- ganti sesuai kebutuhan
+                end
+            end)
         end
-    })
+    end
+})
+
+-- =====================
+-- AUTO BRAINROT
+-- =====================
+
+local TARGET_POSITION = Vector3.new(3.1586, 2.9999997, -12032.942)
+
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+
+local function teleportToTarget()
+    local player = Players.LocalPlayer
+
+    -- Tunggu sampai character ada
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+
+    if hrp then
+        hrp.CFrame = CFrame.new(TARGET_POSITION)
+        task.wait(0.3) -- kasih jeda biar server register posisi
+    end
 end
 
--- Credit
-Window:AddLabel({ text = "Credit : Rilzz" })
+local function runA()
+    RS:WaitForChild("DashEvent"):FireServer(3)
+end
 
--- Inisialisasi UI
+local function runB()
+    RS:WaitForChild("DashEvent"):FireServer("EndWarp")
+end
+
+local function runC()
+    RS:WaitForChild("DashEvent"):FireServer("ClearDash")
+end
+
+folder:AddToggle({
+    text = "Auto Brainrot",
+    flag = "AutoBrainrot",
+    callback = function(state)
+        if state then
+            task.spawn(function()
+                while library.flags["AutoBrainrot"] do
+                    teleportToTarget()  -- TP ke koordinat
+
+                    runA()             -- jalankan A
+                    task.wait(1)       -- tunggu 1 detik
+
+                    runB()             -- jalankan B
+                    task.wait(3)       -- tunggu 3 detik
+
+                    runC()             -- jalankan C
+                    task.wait(0.5)     -- jeda sebelum loop ulang
+                end
+            end)
+        end
+    end
+})
+
+-- =====================
+-- CREDIT
+-- =====================
+folder:AddLabel({ text = "Credit : Rilzz" })
+
 library:Init()
