@@ -1350,6 +1350,7 @@ local State = {
     AutoUpgrade    = false,
     AutoCoils      = false,
     AutoRebirth    = false,
+    AutoFuse       = false,
     AutoNearest    = false,
     AutoNearestV2  = false,
     AutoBrainrotV2 = false,
@@ -2244,6 +2245,54 @@ TabMain:Toggle({
                 end
             end)
         else stopThread("AutoRebirth") end
+    end,
+})
+
+-- =============================================
+--  AUTO FUSE
+-- =============================================
+local FUSE_LIST = {
+    "tralala",
+    "bee",
+    "pineaplino",
+    "vulture",
+    "rengRongo",
+    "lordoRobo",
+    "kingFalken",
+}
+
+local selectedFuse = FUSE_LIST[1]
+
+TabMain:Dropdown({
+    ["Title"]   = "Pilih Fuse Target",
+    ["Values"]  = FUSE_LIST,
+    ["Default"] = FUSE_LIST[1],
+    ["Callback"] = function(val)
+        selectedFuse = val
+        notify("Auto Fuse", "Fuse target: " .. val, 2)
+    end,
+})
+
+TabMain:Toggle({
+    ["Title"]   = "Auto Fuse",
+    ["Default"] = false,
+    ["Callback"] = function(v)
+        State.AutoFuse = v
+        if v then
+            threads.AutoFuse = task.spawn(function()
+                while State.AutoFuse do
+                    local ok, err = pcall(function()
+                        remContainer["data.fuse.createFuse"]:FireServer(selectedFuse)
+                    end)
+                    if ok then
+                        notify("Auto Fuse", "🔁 Fuse dikirim: " .. selectedFuse, 2)
+                    else
+                        notify("Auto Fuse ❌", "Gagal: " .. tostring(err):sub(1, 60), 3)
+                    end
+                    task.wait(3)
+                end
+            end)
+        else stopThread("AutoFuse") end
     end,
 })
 
