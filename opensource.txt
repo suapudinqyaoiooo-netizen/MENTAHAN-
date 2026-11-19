@@ -6013,9 +6013,6 @@ do
 
             local aS = Instance.new'TextBox'
 
-            aS.Selectable = true
-            aS.TextEditable = true
-
             aS.PlaceholderText = A[190]
             aS.PlaceholderColor3 = aC.get'Unselected'
             aS.FontFace = aN.Fonts.Main
@@ -6029,7 +6026,9 @@ do
             aS.TextSize = 14
             aS.TextXAlignment = Enum.TextXAlignment.Left
             aS.ClearTextOnFocus = true
-            aS.Active = A[34]
+            aS.TextEditable = true
+            aS.Selectable = true
+            aS.Active = true
             aS.Parent = aP
             aL.SearchInput = aS
             aL.Scroll.Position = UDim2.fromOffset(A[186], A[192])
@@ -7217,9 +7216,6 @@ do
 
             local aY = Instance.new'TextBox'
 
-            aY.Selectable = true
-            aY.TextEditable = true
-
             aY.FontFace = as.SemiBold
             aY.Text = ''
             aY.BackgroundTransparency = 1
@@ -7227,6 +7223,9 @@ do
             aY.BorderSizePixel = 0
             aY.TextSize = 16
             aY.TextScaled = false
+            aY.TextEditable = true
+            aY.Selectable = true
+            aY.Active = true
 
             aK.Batch:Bind(aY, 'TextColor3', 'TextColor')
 
@@ -7470,9 +7469,6 @@ do
 
             local aS = Instance.new'TextBox'
 
-            aS.Selectable = true
-            aS.TextEditable = true
-
             aS.ClearTextOnFocus = false
             aS.FontFace = as.SemiBold
             aS.TextColor3 = aC.get'TextColor'
@@ -7483,7 +7479,8 @@ do
             aS.Position = UDim2.new(0, A[175], 0.5, 0)
             aS.AutomaticSize = Enum.AutomaticSize.XY
             aS.TextSize = A[13]
-            aS.Selectable = false
+            aS.TextEditable = true
+            aS.Selectable = true
             aS.Active = true
             aS.Parent = aO
 
@@ -10707,9 +10704,6 @@ do
 
             local aM = Instance.new'TextBox'
 
-            aM.Selectable = true
-            aM.TextEditable = true
-
             aM.PlaceholderText = A[190]
             aM.PlaceholderColor3 = aw.get'Unselected'
             aM.FontFace = aI.Fonts.Main
@@ -10722,6 +10716,8 @@ do
             aM.TextSize = 14
             aM.TextXAlignment = Enum.TextXAlignment.Left
             aM.ClearTextOnFocus = A[34]
+            aM.TextEditable = true
+            aM.Selectable = true
             aM.Active = true
 
             aE.Batch:Bind(aM, 'TextColor3', 'TextColor')
@@ -12679,7 +12675,7 @@ do
             aK.ClipsDescendants = true
             aK.AnchorPoint = Vector2.new(A[63], 0.5)
             aK.Position = UDim2.new(A[63], -A[63], 0.5, 0)
-            aK.Size = UDim2.fromOffset(0, aJ)
+            aK.Size = UDim2.fromOffset(math.min(aC.MaxWidth + 12, math.max(120, #aC.Placeholder * 8 + 24)), aJ)
             aK.BorderSizePixel = 0
 
             aE.Batch:Bind(aK, A[5], A[168])
@@ -12718,9 +12714,14 @@ do
             aO.Position = UDim2.new(0, 5, A[101], 0)
             aO.AutomaticSize = Enum.AutomaticSize.XY
             aO.TextSize = A[13]
-            aO.Selectable = true
+            aO.TextXAlignment = Enum.TextXAlignment.Left
+            aO.TextYAlignment = Enum.TextYAlignment.Center
+            aO.TextWrapped = false
             aO.TextEditable = true
-            aO.Active = A[34]
+            aO.Selectable = true
+            aO.Active = true
+            aO.AutomaticSize = Enum.AutomaticSize.None
+            aO.Size = UDim2.new(1, -12, 1, 0)
 
             aE.Batch:Bind(aO, 'TextColor3', 'TextColor')
 
@@ -12743,14 +12744,14 @@ do
                     aO.TextSize = 16
                 end
 
-                local aS = aO.AbsoluteSize.X
+                local aS = aO.TextBounds.X
 
                 if aC.MaxWidth < aS then
                     aO.TextSize = math.max(math.floor(A[13] * aC.MaxWidth / aS), 8)
-                    aS = aC.MaxWidth
+                    aS = aO.TextBounds.X
                 end
 
-                local aT = UDim2.fromOffset(aS + 12, aJ)
+                local aT = UDim2.fromOffset(math.min(aC.MaxWidth + 12, math.max(120, aS + 24)), aJ)
 
                 if aR then
                     aI:Tween(aK, {Size = aT}, aQ)
@@ -19341,9 +19342,6 @@ do
 
             local aW = Instance.new'TextBox'
 
-            aW.Selectable = true
-            aW.TextEditable = true
-
             aW.AnchorPoint = Vector2.new(0, A[101])
             aW.Position = UDim2.new(0, 32, 0.5, 0)
             aW.Size = UDim2.new(1, -72, 1, -A[162])
@@ -19356,6 +19354,9 @@ do
             aW.TextXAlignment = Enum.TextXAlignment.Left
             aW.ClearTextOnFocus = A[153]
             aW.FontFace = at.SemiBold
+            aW.TextEditable = true
+            aW.Selectable = true
+            aW.Active = true
             aW.Visible = false
 
             aK:Bind(aW, 'TextColor3', 'TextColor')
